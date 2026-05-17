@@ -1,4 +1,4 @@
-# run_server.py - Serveur V2.1
+# run_server.py - Serveur
 import uvicorn
 import os
 import webbrowser
@@ -11,7 +11,7 @@ def print_banner():
     banner = """
 ╔══════════════════════════════════════════════════════════════╗
 ║                                                              ║
-║   🩸  SYSTÈME DE SUIVI DE SANG V2.1                         ║
+║   🩸  SYSTÈME DE SUIVI DE SANG                        ║
 ║   📊  Blood Tracking Management System                      ║
 ║                                                              ║
 ╚══════════════════════════════════════════════════════════════╝

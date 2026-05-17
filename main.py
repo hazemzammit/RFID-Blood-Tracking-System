@@ -28,7 +28,7 @@ from fastapi import Request, Response
 from fastapi.responses import RedirectResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-app = FastAPI(title="SystÃ¨me de Suivi de Sang V2.1", version="2.1.0")
+app = FastAPI(title="Système de Suivi de Sang", version="1.0.0")
 
 # ESP32 API Key (from config.py)
 ESP32_API_KEY = settings.API_KEY  # "blood-tracker-v2-1-api-key-2024"
@@ -119,7 +119,7 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
 def get_current_user(db: Session = Depends(get_db), token: dict = Depends(verify_token)):
     user = db.query(models.User).filter(models.User.id == token["sub"]).first()
     if not user or not user.is_active:
-        raise HTTPException(status_code=401, detail="Utilisateur non autorisÃ©")
+        raise HTTPException(status_code=401, detail="Utilisateur non autorisé")
     return user
 
 # Blood compatibility logic
@@ -145,7 +145,7 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
             (models.User.username == user.username) | (models.User.email == user.email)
         ).first()
         if existing_user:
-            raise HTTPException(status_code=400, detail="Nom d'utilisateur ou email dÃ©jÃ  existant")
+            raise HTTPException(status_code=400, detail="Nom d'utilisateur ou email déjà existant")
         
         hashed_password = bcrypt.hashpw(user.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         
@@ -159,7 +159,7 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(db_user)
         
-        return {"message": "Utilisateur crÃ©Ã© avec succÃ¨s"}
+        return {"message": "Utilisateur créé avec succès"}
     except HTTPException:
         raise
     except Exception as e:
@@ -204,7 +204,7 @@ def login(response: Response, login_data: schemas.UserLogin, db: Session = Depen
             "sub": user.id,
             "username": user.username,
             "email": user.email,
-            "role": user.role,  # CRITICAL: Include role in token
+            "role": user.role,
             "exp": datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         }
         token = PyJWT.encode(token_data, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
@@ -241,7 +241,7 @@ def login(response: Response, login_data: schemas.UserLogin, db: Session = Depen
         
         print(f"[LOGIN] Login successful for user: {user.username} (Role: {user.role})")
         
-        # CRITICAL FIX: Return COMPLETE user data including role
+        # Return complete user data including role
         return {
             "access_token": token,
             "token_type": "bearer",
@@ -249,7 +249,7 @@ def login(response: Response, login_data: schemas.UserLogin, db: Session = Depen
                 "id": user.id,
                 "username": user.username,
                 "email": user.email,
-                "role": user.role  # MUST include role here
+                "role": user.role
             }
         }
     except HTTPException:
@@ -261,7 +261,7 @@ def login(response: Response, login_data: schemas.UserLogin, db: Session = Depen
         raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
 
 
-# Workflow Management - FIXED ASYNC VERSIONS
+# Workflow Management
 @app.post("/api/workflow/start")
 async def start_workflow(workflow: schemas.WorkflowStart, db: Session = Depends(get_db)):
     try:
@@ -288,7 +288,7 @@ async def start_workflow(workflow: schemas.WorkflowStart, db: Session = Depends(
             "data": {
                 "workflow_type": workflow.workflow_type,
                 "step": "WAIT_SELECTION",
-                "message": "Workflow dÃ©marrÃ©. Veuillez faire votre sÃ©lection."
+                "message": "Workflow démarré. Veuillez faire votre sélection."
             }
         }))
         
@@ -359,12 +359,12 @@ async def reception_patient_choice(choice: schemas.ReceptionPatientChoice, db: S
         
         mode = db.query(models.SystemMode).first()
         if not mode or mode.current_workflow != "RECEPTION":
-            raise HTTPException(status_code=400, detail="Aucun workflow de rÃ©ception en cours")
+            raise HTTPException(status_code=400, detail="Aucun workflow de réception en cours")
         
         if choice.has_existing_card:
             mode.workflow_step = "WAIT_PATIENT_CARD_VERIFICATION"
             mode.active_module = "VERIFICATION"
-            message = "Veuillez scanner la carte patient sur le module VÃ‰RIFICATION"
+            message = "Veuillez scanner la carte patient sur le module VÉRIFICATION"
         else:
             mode.workflow_step = "NEW_PATIENT_FORM"
             mode.active_module = "NONE"
@@ -510,12 +510,8 @@ async def workflow_progress(progress: dict, db: Session = Depends(get_db)):
 
 
 
-# ============================================================
-# ENHANCED: PATIENT SCANNED WITH BETTER FEEDBACK
-# ============================================================
-
 async def handle_patient_scanned(progress: dict, db: Session):
-    """Enhanced patient scanned handler with better feedback"""
+    """Handle patient scanned during donation workflow"""
     mode = db.query(models.SystemMode).first()
     if mode and mode.current_workflow == "DONATION":
         tag_data = progress.get("data", "")
@@ -535,7 +531,7 @@ async def handle_patient_scanned(progress: dict, db: Session):
             }
             db.commit()
             
-            # ENHANCED: Broadcast with detailed patient info
+            # Broadcast with detailed patient info
             await manager.broadcast(json.dumps({
                 "type": "workflow_step_changed",
                 "data": {
@@ -556,12 +552,8 @@ async def handle_patient_scanned(progress: dict, db: Session):
             }))
 
 
-# ============================================================
-# ENHANCED: BLOOD TAG WRITTEN WITH COMPLETION NOTIFICATION
-# ============================================================
-
 async def handle_blood_tag_written(progress: dict, db: Session):
-    """Enhanced blood tag write with completion notification"""
+    """Handle blood tag written during donation workflow"""
     print("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     print("║  [BACKEND] BLOOD_TAG_WRITTEN           ║")
     print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -651,7 +643,7 @@ async def handle_blood_tag_written(progress: dict, db: Session):
         db.refresh(blood_pouch)
         print("  ✅ Database committed")
         
-        # ENHANCED: Broadcast donation complete with rich notification
+        # Broadcast donation complete with rich notification
         completion_data = {
             "donor_code": donor_code,
             "blood_group": blood_group,
@@ -1667,7 +1659,7 @@ def get_audit_logs(limit: int = 100, db: Session = Depends(get_db),
             user = db.query(models.User).filter(models.User.id == log.user_id).first() if log.user_id else None
             result.append({
                 "id": log.id,
-                "user": user.username if user else "SystÃ¨me",
+                "user": user.username if user else "Système",
                 "action": log.action_type,
                 "details": log.details,
                 "timestamp": log.timestamp.isoformat()
@@ -1677,7 +1669,7 @@ def get_audit_logs(limit: int = 100, db: Session = Depends(get_db),
     
     except Exception as e:
         print(f"ERROR in get_audit_logs: {str(e)}")
-        raise HTTPException(status_code=500, detail="Erreur lors de la rÃ©cupÃ©ration des logs")
+        raise HTTPException(status_code=500, detail="Erreur lors de la récupération des logs")
 
 
 @app.get("/api/admin/users")
