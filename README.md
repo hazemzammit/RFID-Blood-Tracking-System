@@ -20,7 +20,6 @@ A complete blood donation and transfusion management system using RFID technolog
 - [API Documentation](#api-documentation)
 - [Database Schema](#database-schema)
 - [Security](#security)
-- [Roadmap](#roadmap)
 
 ---
 
