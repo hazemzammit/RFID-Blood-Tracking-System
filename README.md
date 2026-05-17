@@ -417,48 +417,8 @@ error_message, signal_strength, timestamp
 
 ---
 
-## 🎯 Roadmap
-
-### Version 1.1 (Planned)
-- [ ] Multi-language support (English, Arabic, French)
-- [ ] PDF report export
-- [ ] Email notifications
-- [ ] Appointment scheduling
-- [ ] Mobile native application
-
-### Version 2.0 (Future)
-- [ ] AI-powered demand prediction
-- [ ] Hospital system integration
-- [ ] NFC support in addition to RFID
-- [ ] Advanced analytics dashboard
-
----
-
 ## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
-
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the project
-2. Create a branch (`git checkout -b feature/improvement`)
-3. Commit changes (`git commit -m 'Add new feature'`)
-4. Push (`git push origin feature/improvement`)
-5. Open a Pull Request
-
----
-
-## 👥 Authors
-
-- **Blood Tracking System** - Developed to improve blood bank safety
-
----
-
-## 📞 Support
-
-- Open an issue on GitHub
-- Check the [Installation Guide](INSTALLATION_GUIDE.md)
