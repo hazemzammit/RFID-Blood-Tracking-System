@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Mon Profil - Système de Suivi de Sang{% endblock %}
+{% block page_title %}Mon Profil{% endblock %}
+{% block breadcrumb_title %}Mon Profil{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-4">
+        <div class="card shadow mb-4">
+            <div class="card-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-user-circle fa-5x text-primary"></i>
+                </div>
+                <h4 id="profileUsername">Chargement...</h4>
+                <p class="text-muted" id="profileEmail">email@example.com</p>
+                <span class="badge bg-primary" id="profileRole">Role</span>
+                <hr>
+                <p class="text-muted small">
+                    <i class="fas fa-calendar me-2"></i>
+                    Membre depuis: <span id="profileCreatedAt">-</span>
+                </p>
+                <p class="text-muted small">
+                    <i class="fas fa-clock me-2"></i>
+                    Dernière connexion: <span id="profileLastLogin">-</span>
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">Modifier le Profil</h6>
+            </div>
+            <div class="card-body">
+                <div id="alertContainer"></div>
+                
+                <form id="profileForm">
+                    <div class="mb-3">
+                        <label class="form-label">Nom d'utilisateur</label>
+                        <input type="text" class="form-control" id="username" readonly>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" readonly>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Rôle</label>
+                        <input type="text" class="form-control" id="role" readonly>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card shadow mb-4">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">Changer le Mot de Passe</h6>
+            </div>
+            <div class="card-body">
+                <div id="passwordAlertContainer"></div>
+                
+                <form id="passwordForm">
+                    <div class="mb-3">
+                        <label class="form-label">Ancien mot de passe</label>
+                        <input type="password" class="form-control" id="oldPassword" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Nouveau mot de passe</label>
+                        <input type="password" class="form-control" id="newPassword" required minlength="6">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Confirmer le nouveau mot de passe</label>
+                        <input type="password" class="form-control" id="confirmPassword" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-key me-2"></i>Changer le Mot de Passe
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Load user profile
+const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+document.getElementById('profileUsername').textContent = user.username || '-';
+document.getElementById('profileEmail').textContent = user.email || '-';
+document.getElementById('profileRole').textContent = user.role || '-';
+document.getElementById('username').value = user.username || '';
+document.getElementById('email').value = user.email || '';
+document.getElementById('role').value = user.role || '';
+
+// Note: created_at and last_login would come from API in real implementation
+document.getElementById('profileCreatedAt').textContent = 'N/A';
+document.getElementById('profileLastLogin').textContent = 'N/A';
+</script>
+{% endblock %}

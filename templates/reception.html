@@ -1,0 +1,529 @@
+{% extends "base.html" %}
+
+{% block title %}Processus de Réception - Système de Suivi de Sang{% endblock %}
+{% block page_title %}Processus de Réception de Sang{% endblock %}
+{% block breadcrumb_title %}Processus de Réception de Sang{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Workflow de Réception de Sang</h6>
+            </div>
+            <div class="card-body">
+                <div id="workflowDisplay">
+                    <div class="alert alert-info">
+                        <h6>Prêt à commencer</h6>
+                        <p class="mb-0">Cliquez sur le bouton ci-dessous pour lancer le processus de réception.</p>
+                    </div>
+                </div>
+
+                <div id="errorDisplay" style="display: none;"></div>
+
+                <div class="workflow-container mt-4">
+                    <!-- Étape 1: Démarrage -->
+                    <div class="workflow-step active" id="step1">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="step-number me-3">1</div>
+                            <div class="flex-grow-1">
+                                <h5 class="mb-1">Démarrage du Processus</h5>
+                                <p class="mb-0 text-muted">Cliquez sur "Commencer la Réception" pour initier le processus.</p>
+                            </div>
+                        </div>
+                        <div class="step-content">
+                            <button class="btn btn-success btn-lg" id="startReceptionBtn">
+                                <i class="fas fa-user-injured me-2"></i>Commencer la Réception
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Étape 2: Choix patient -->
+                    <div class="workflow-step" id="step2" style="display: none;">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="step-number me-3">2</div>
+                            <div class="flex-grow-1">
+                                <h5 class="mb-1">Patient Existant ?</h5>
+                                <p class="mb-0 text-muted">Le patient a-t-il déjà une carte patient ?</p>
+                            </div>
+                        </div>
+                        <div class="step-content">
+                            <div class="d-grid gap-2">
+                                <button type="button" class="btn btn-success btn-lg" id="existingPatientBtn">
+                                    <i class="fas fa-id-card me-2"></i>Oui - Carte Existante
+                                </button>
+                                <button type="button" class="btn btn-warning btn-lg" id="newPatientBtn">
+                                    <i class="fas fa-user-plus me-2"></i>Non - Nouveau Patient
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Étape 3A: Patient existant - Scan sur VERIFICATION -->
+                    <div class="workflow-step" id="step3Existing" style="display: none;">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="step-number me-3">3</div>
+                            <div class="flex-grow-1">
+                                <h5 class="mb-1">Scanner Carte Patient</h5>
+                                <p class="mb-0 text-muted">Veuillez scanner la carte patient sur le module VÉRIFICATION.</p>
+                            </div>
+                        </div>
+                        <div class="step-content">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-wifi fa-2x mb-2 d-block"></i>
+                                <h5>En attente du scan RFID...</h5>
+                                <p class="mb-0">Module actif: <strong>VÉRIFICATION</strong></p>
+                            </div>
+                            <div class="mt-3 d-flex gap-2">
+                                <button class="btn btn-secondary" id="backToStep2Btn">
+                                    <i class="fas fa-arrow-left me-2"></i>Retour
+                                </button>
+                                <button class="btn btn-danger" id="cancelWorkflowBtn">
+                                    <i class="fas fa-times me-2"></i>Annuler
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Étape 3B: Nouveau patient - Formulaire -->
+                    <div class="workflow-step" id="step3New" style="display: none;">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="step-number me-3">3</div>
+                            <div class="flex-grow-1">
+                                <h5 class="mb-1">Nouveau Patient</h5>
+                                <p class="mb-0 text-muted">Remplissez les informations du nouveau patient.</p>
+                            </div>
+                        </div>
+                        <div class="step-content">
+                            <form id="newPatientForm">
+                                <div class="mb-3">
+                                    <label class="form-label">Nom du Patient <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" name="patient_name" required 
+                                           placeholder="Ex: Fatma Ben Salem">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Groupe Sanguin <span class="text-danger">*</span></label>
+                                    <select class="form-select" name="blood_group" required>
+                                        <option value="">Sélectionnez...</option>
+                                        <option value="O-">O-</option>
+                                        <option value="O+">O+</option>
+                                        <option value="A-">A-</option>
+                                        <option value="A+">A+</option>
+                                        <option value="B-">B-</option>
+                                        <option value="B+">B+</option>
+                                        <option value="AB-">AB-</option>
+                                        <option value="AB+">AB+</option>
+                                    </select>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-secondary" id="backToStep2FromFormBtn">
+                                        <i class="fas fa-arrow-left me-2"></i>Retour
+                                    </button>
+                                    <button type="button" class="btn btn-primary" id="submitPatientBtn">
+                                        <i class="fas fa-save me-2"></i>Créer Patient
+                                    </button>
+                                    <button type="button" class="btn btn-danger" id="cancelWorkflowFromFormBtn">
+                                        <i class="fas fa-times me-2"></i>Annuler
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Étape 3C: Écriture carte nouveau patient -->
+                    <div class="workflow-step" id="step3Write" style="display: none;">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="step-number me-3">3</div>
+                            <div class="flex-grow-1">
+                                <h5 class="mb-1">Écriture Carte Patient</h5>
+                                <p class="mb-0 text-muted">Veuillez scanner une nouvelle carte RFID sur le module PRINCIPAL.</p>
+                            </div>
+                        </div>
+                        <div class="step-content">
+                            <div id="newPatientInfoDisplay" class="alert alert-info mb-3"></div>
+                            <div class="alert alert-warning">
+                                <i class="fas fa-wifi fa-2x mb-2 d-block"></i>
+                                <h5>En attente du scan RFID...</h5>
+                                <p class="mb-0">Module actif: <strong>PRINCIPAL</strong></p>
+                            </div>
+                            <div class="mt-3 d-flex gap-2">
+                                <button class="btn btn-danger" id="cancelWorkflowStep3Btn">
+                                    <i class="fas fa-times me-2"></i>Annuler
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Étape 4: Scanner poche de sang -->
+                    <div class="workflow-step" id="step4" style="display: none;">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="step-number me-3">4</div>
+                            <div class="flex-grow-1">
+                                <h5 class="mb-1">Scanner Poche de Sang</h5>
+                                <p class="mb-0 text-muted">Veuillez scanner la poche de sang sur le module VÉRIFICATION.</p>
+                            </div>
+                        </div>
+                        <div class="step-content">
+                            <div id="patientInfoDisplay" class="alert alert-info mb-3"></div>
+                            <div class="alert alert-warning">
+                                <i class="fas fa-wifi fa-2x mb-2 d-block"></i>
+                                <h5>En attente du scan RFID...</h5>
+                                <p class="mb-0">Module actif: <strong>VÉRIFICATION</strong></p>
+                            </div>
+                            <div class="mt-3 d-flex gap-2">
+                                <button class="btn btn-secondary" id="backToStep3Btn">
+                                    <i class="fas fa-arrow-left me-2"></i>Retour
+                                </button>
+                                <button class="btn btn-danger" id="cancelWorkflowStep4Btn">
+                                    <i class="fas fa-times me-2"></i>Annuler
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Étape 5: Résultat -->
+                    <div class="workflow-step" id="step5" style="display: none;">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="step-number me-3">5</div>
+                            <div class="flex-grow-1">
+                                <h5 class="mb-1">Résultat de la Vérification</h5>
+                                <p class="mb-0 text-muted">Résultat de la compatibilité sang-patient.</p>
+                            </div>
+                        </div>
+                        <div class="step-content">
+                            <div id="verificationResult"></div>
+                            <div class="mt-3">
+                                <button class="btn btn-success btn-lg" id="resetWorkflowBtn">
+                                    <i class="fas fa-redo me-2"></i>Nouvelle Réception
+                                </button>
+                                <a href="/" class="btn btn-outline-secondary btn-lg">
+                                    <i class="fas fa-home me-2"></i>Retour au Tableau de Bord
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentWorkflowId = null;
+    let currentStep = 1;
+    let currentPatientData = null;
+
+    function showError(message) {
+        const errorDisplay = document.getElementById('errorDisplay');
+        errorDisplay.innerHTML = `
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Erreur:</strong> ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+        errorDisplay.style.display = 'block';
+    }
+
+    function hideError() {
+        document.getElementById('errorDisplay').style.display = 'none';
+    }
+
+    function startReception() {
+        hideError();
+        
+        fetch('/api/workflow/start', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ workflow_type: 'RECEPTION' })
+        })
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            showStep(2);
+            updateWorkflowDisplay('Processus de réception démarré. Le patient a-t-il une carte existante ?');
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showError('Erreur lors du démarrage du processus de réception.');
+        });
+    }
+
+    function patientChoice(hasExistingCard) {
+        hideError();
+        
+        fetch('/api/workflow/reception/patient-choice', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ has_existing_card: hasExistingCard })
+        })
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            if (hasExistingCard) {
+                showStep(3, 'existing');
+                updateWorkflowDisplay('Veuillez scanner la carte patient sur le module VÉRIFICATION.');
+            } else {
+                showStep(3, 'new');
+                updateWorkflowDisplay('Veuillez remplir les informations du nouveau patient.');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showError('Erreur lors du choix du type de patient.');
+        });
+    }
+
+    function submitNewPatient() {
+        hideError();
+        
+        const form = document.getElementById('newPatientForm');
+        const formData = new FormData(form);
+        
+        const patientData = {
+            patient_name: formData.get('patient_name'),
+            blood_group: formData.get('blood_group')
+        };
+
+        if (!patientData.patient_name || !patientData.blood_group) {
+            showError('Veuillez remplir tous les champs obligatoires.');
+            return;
+        }
+
+        fetch('/api/workflow/patient/new', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(patientData)
+        })
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            currentWorkflowId = data.workflow_id;
+            currentPatientData = patientData;
+            showStep(3, 'write');
+            
+            const infoDisplay = document.getElementById('newPatientInfoDisplay');
+            infoDisplay.innerHTML = `
+                <strong>Nouveau Patient:</strong><br>
+                Code: ${data.patient_code}<br>
+                Nom: ${patientData.patient_name}<br>
+                Groupe Sanguin: ${patientData.blood_group}
+            `;
+            
+            updateWorkflowDisplay('Veuillez scanner une nouvelle carte RFID sur le module PRINCIPAL.');
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showError('Erreur lors de la création du patient.');
+        });
+    }
+
+    function showStep(step, variant = null) {
+        document.querySelectorAll('.workflow-step').forEach(stepElement => {
+            stepElement.style.display = 'none';
+            stepElement.classList.remove('active');
+        });
+
+        let stepId = 'step' + step;
+        if (step === 3) {
+            if (variant === 'new') {
+                stepId = 'step3New';
+            } else if (variant === 'existing') {
+                stepId = 'step3Existing';
+            } else if (variant === 'write') {
+                stepId = 'step3Write';
+            }
+        }
+
+        const stepElement = document.getElementById(stepId);
+        if (stepElement) {
+            stepElement.style.display = 'block';
+            stepElement.classList.add('active');
+            currentStep = step;
+        }
+    }
+
+    function goBackToStep(step) {
+        showStep(step);
+        if (step === 2) {
+            updateWorkflowDisplay('Le patient a-t-il une carte existante ?');
+        } else if (step === 3) {
+            showStep(2);
+            updateWorkflowDisplay('Le patient a-t-il une carte existante ?');
+        }
+    }
+
+    function cancelWorkflow() {
+        if (confirm('Êtes-vous sûr de vouloir annuler le processus de réception ?')) {
+            fetch('/api/workflow/cancel', { method: 'POST' })
+            .then(() => resetWorkflow());
+        }
+    }
+
+    function resetWorkflow() {
+        showStep(1);
+        updateWorkflowDisplay('Prêt à commencer.');
+        document.getElementById('newPatientForm').reset();
+        currentWorkflowId = null;
+        currentPatientData = null;
+        hideError();
+    }
+
+    function updateWorkflowDisplay(message) {
+        const display = document.getElementById('workflowDisplay');
+        display.innerHTML = `
+            <div class="alert alert-info">
+                <h6><i class="fas fa-info-circle me-2"></i>Étape ${currentStep} sur 5</h6>
+                <p class="mb-0">${message}</p>
+            </div>
+        `;
+    }
+
+    // Event listeners
+    document.addEventListener('DOMContentLoaded', function() {
+        showStep(1);
+        
+        document.getElementById('startReceptionBtn').addEventListener('click', startReception);
+        document.getElementById('existingPatientBtn').addEventListener('click', () => patientChoice(true));
+        document.getElementById('newPatientBtn').addEventListener('click', () => patientChoice(false));
+        document.getElementById('submitPatientBtn').addEventListener('click', submitNewPatient);
+        document.getElementById('backToStep2Btn').addEventListener('click', () => goBackToStep(2));
+        document.getElementById('backToStep2FromFormBtn').addEventListener('click', () => goBackToStep(2));
+        document.getElementById('backToStep3Btn').addEventListener('click', () => goBackToStep(3));
+        document.getElementById('cancelWorkflowBtn').addEventListener('click', cancelWorkflow);
+        document.getElementById('cancelWorkflowFromFormBtn').addEventListener('click', cancelWorkflow);
+        document.getElementById('cancelWorkflowStep3Btn').addEventListener('click', cancelWorkflow);
+        document.getElementById('cancelWorkflowStep4Btn').addEventListener('click', cancelWorkflow);
+        document.getElementById('resetWorkflowBtn').addEventListener('click', resetWorkflow);
+
+        // WebSocket
+        if (window.ws) {
+            const originalOnMessage = window.ws.onmessage;
+            window.ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                
+                if (data.type === 'workflow_step_changed') {
+                    updateWorkflowDisplay(data.data.message);
+                    
+                    if (data.data.patient) {
+                        const patientInfo = document.getElementById('patientInfoDisplay');
+                        if (patientInfo) {
+                            patientInfo.innerHTML = `
+                                <strong>Patient:</strong> ${data.data.patient.code}<br>
+                                <strong>Nom:</strong> ${data.data.patient.name}<br>
+                                <strong>Groupe Sanguin:</strong> <span class="badge bg-primary">${data.data.patient.blood_group}</span>
+                            `;
+                        }
+                    }
+                } else if (data.type === 'patient_created') {
+                    if (data.data.next_step === 'WAIT_PATIENT_CARD_VERIFICATION') {
+                        showStep(3, 'existing');
+                        updateWorkflowDisplay(data.data.message);
+                    }
+                } else if (data.type === 'verification_result') {
+                    showStep(5);
+                    const resultDiv = document.getElementById('verificationResult');
+                    
+                    if (data.data.result === 'COMPATIBLE') {
+                        resultDiv.innerHTML = `
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle fa-3x mb-3 d-block text-success"></i>
+                                <h4 class="text-success">✓ COMPATIBLE</h4>
+                                <p class="mb-3"><strong>${data.data.message}</strong></p>
+                                <hr>
+                                <div class="row text-start">
+                                    <div class="col-md-6">
+                                        <h6>Patient:</h6>
+                                        <p class="mb-1"><strong>Code:</strong> ${data.data.patient.patient_code}</p>
+                                        <p class="mb-0"><strong>Groupe:</strong> <span class="badge bg-primary">${data.data.patient.blood_group}</span></p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>Poche de Sang:</h6>
+                                        <p class="mb-1"><strong>Code:</strong> ${data.data.pouch.donor_code}</p>
+                                        <p class="mb-0"><strong>Groupe:</strong> <span class="badge bg-primary">${data.data.pouch.blood_group}</span></p>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        resultDiv.innerHTML = `
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-triangle fa-3x mb-3 d-block text-danger"></i>
+                                <h4 class="text-danger">⚠ DANGER - INCOMPATIBLE</h4>
+                                <p class="mb-3"><strong>${data.data.message}</strong></p>
+                                <hr>
+                                <div class="row text-start">
+                                    <div class="col-md-6">
+                                        <h6>Patient:</h6>
+                                        <p class="mb-1"><strong>Code:</strong> ${data.data.patient.patient_code}</p>
+                                        <p class="mb-0"><strong>Groupe:</strong> <span class="badge bg-danger">${data.data.patient.blood_group}</span></p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>Poche de Sang:</h6>
+                                        <p class="mb-1"><strong>Code:</strong> ${data.data.pouch.donor_code}</p>
+                                        <p class="mb-0"><strong>Groupe:</strong> <span class="badge bg-danger">${data.data.pouch.blood_group}</span></p>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+                
+                if (originalOnMessage) originalOnMessage(event);
+            };
+        }
+    });
+</script>
+
+<style>
+.step-number {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #28a745;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.workflow-step {
+    padding: 1.5rem;
+    border-radius: 8px;
+    background: #f8f9fa;
+    margin-bottom: 1rem;
+}
+
+.workflow-step.active {
+    background: #d4edda;
+    border-left: 4px solid #28a745;
+}
+
+.step-content {
+    margin-left: 55px;
+}
+
+@media (max-width: 768px) {
+    .step-number {
+        width: 30px;
+        height: 30px;
+        font-size: 1rem;
+    }
+    
+    .step-content {
+        margin-left: 0;
+        margin-top: 1rem;
+    }
+}
+</style>
+{% endblock %}

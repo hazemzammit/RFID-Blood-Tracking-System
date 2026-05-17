@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Système de Suivi de Sang{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/css/mobile.css" rel="stylesheet">
+    <!-- In base.html head section -->
+    <link href="/static/css/modern-dashboard.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <aside class="sidebar d-none d-md-flex" id="sidebar">
+                <!-- Header Section (fixed) -->
+                <div class="sidebar-header">
+                    <!-- Logo -->
+                    <div class="logo-container text-white">
+                        <div class="logo-icon">
+                            <i class="fas fa-tint"></i>
+                        </div>
+                        <h5 class="mb-0">Blood Track</h5>
+                        <small>Version 2.1</small>
+                    </div>
+                    
+                    <!-- User Info -->
+                    <div class="user-info text-white d-flex align-items-center">
+                        <div class="user-avatar me-2">
+                            <span id="userInitials">U</span>
+                        </div>
+                        <div class="flex-grow-1">
+                            <small class="d-block" id="sidebarUsername">Utilisateur</small>
+                            <small class="text-white-50" id="sidebarRole">Role</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Navigation Section (scrollable) -->
+                <div class="sidebar-nav">
+    <nav class="nav flex-column">
+        <!-- Main Section -->
+        <div class="sidebar-heading px-3 mt-3 mb-2 text-white-50">
+            Principal
+        </div>
+        <a class="nav-link {% if request.url.path == '/' %}active{% endif %}" href="/">
+            <i class="fas fa-tachometer-alt me-2"></i>Tableau de Bord
+        </a>
+        <a class="nav-link {% if request.url.path == '/donation' %}active{% endif %}" href="/donation">
+            <i class="fas fa-hand-holding-heart me-2"></i>Processus Don
+        </a>
+        <a class="nav-link {% if request.url.path == '/reception' %}active{% endif %}" href="/reception">
+            <i class="fas fa-user-injured me-2"></i>Processus Réception
+        </a>
+        
+        <!-- Data Management -->
+        <div class="sidebar-heading px-3 mt-3 mb-2 text-white-50">
+            Gestion des Données
+        </div>
+        <a class="nav-link {% if request.url.path == '/pouches' %}active{% endif %}" href="/pouches">
+            <i class="fas fa-droplet me-2"></i>Poches de Sang
+        </a>
+        <a class="nav-link {% if request.url.path == '/patients' %}active{% endif %}" href="/patients">
+            <i class="fas fa-users me-2"></i>Patients
+        </a>
+        <a class="nav-link {% if request.url.path == '/verifications' %}active{% endif %}" href="/verifications">
+            <i class="fas fa-clipboard-check me-2"></i>Vérifications
+        </a>
+        
+        <!-- Administration - ONLY FOR ADMIN -->
+        <div class="sidebar-heading px-3 mt-3 mb-2 text-white-50 admin-only" style="display: none;">
+            Administration
+        </div>
+        <a class="nav-link admin-only {% if request.url.path == '/users' %}active{% endif %}" 
+           href="/users" style="display: none;">
+            <i class="fas fa-users-cog me-2"></i>Utilisateurs
+        </a>
+        <a class="nav-link admin-only {% if request.url.path == '/audit' %}active{% endif %}" 
+           href="/audit" style="display: none;">
+            <i class="fas fa-history me-2"></i>Journal d'Audit
+        </a>
+        <a class="nav-link admin-only {% if request.url.path == '/admin/debug' %}active{% endif %}" 
+           href="/admin/debug" style="display: none;">
+            <i class="fas fa-tools me-2"></i>Centre Debug
+        </a>
+        
+        <!-- Settings & Account -->
+        <div class="sidebar-heading px-3 mt-3 mb-2 text-white-50">
+            Compte & Paramètres
+        </div>
+        <a class="nav-link {% if request.url.path == '/profile' %}active{% endif %}" href="/profile">
+            <i class="fas fa-user me-2"></i>Mon Profil
+        </a>
+        <a class="nav-link {% if request.url.path == '/settings' %}active{% endif %}" href="/settings">
+            <i class="fas fa-cog me-2"></i>Paramètres
+        </a>
+        <a class="nav-link" href="/logout" onclick="handleLogout(event)">
+            <i class="fas fa-sign-out-alt me-2"></i>Déconnexion
+        </a>
+    </nav>
+</div>
+
+            </div>
+
+            <!-- Mobile Navbar -->
+            <nav class="navbar navbar-dark bg-danger d-md-none fixed-top">
+                <div class="container-fluid">
+                    <button class="navbar-toggler" type="button" onclick="toggleMobileSidebar()">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <span class="navbar-brand">Blood Track V2.1</span>
+                    <button class="btn btn-sm btn-outline-light" onclick="handleLogout(event)">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </nav>
+
+            <!-- Main Content -->
+            <main class="main-content">
+                <!-- Top Navbar -->
+                <nav class="navbar navbar-light bg-white border-bottom sticky-top">
+                    <div class="container-fluid">
+                        <span class="navbar-brand mb-0 h5">
+                            <i class="fas fa-chevron-right text-muted me-2"></i>
+                            {% block page_title %}Tableau de Bord{% endblock %}
+                        </span>
+                        <div class="d-flex align-items-center">
+                            <!-- Real-time status indicator -->
+                            <span class="navbar-text me-3 d-none d-md-inline">
+                                <i class="fas fa-circle text-success me-1" id="connectionStatus"></i>
+                                <small>Temps Réel</small>
+                            </span>
+                            
+                            <!-- User dropdown -->
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                                        id="userDropdown" data-bs-toggle="dropdown">
+                                    <i class="fas fa-user-circle me-1"></i>
+                                    <span id="navUsername">Utilisateur</span>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="/profile">
+                                        <i class="fas fa-user me-2"></i>Mon Profil
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="/settings">
+                                        <i class="fas fa-cog me-2"></i>Paramètres
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="/logout" onclick="handleLogout(event)">
+                                        <i class="fas fa-sign-out-alt me-2"></i>Déconnexion
+                                    </a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </nav>
+                
+                <!-- Page Content -->
+                <div class="container-fluid mt-4 mb-5">
+                    <!-- Breadcrumb -->
+                    <nav aria-label="breadcrumb" class="mb-3">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="/">Accueil</a></li>
+                            <li class="breadcrumb-item active">{% block breadcrumb_title %}Dashboard{% endblock %}</li>
+                        </ol>
+                    </nav>
+                    
+                    {% block content %}{% endblock %}
+                </div>
+                
+                <!-- Footer -->
+                <footer class="bg-white border-top py-3 mt-5">
+                    <div class="container-fluid">
+                        <div class="row">
+                            <div class="col-md-6 text-center text-md-start">
+                                <small class="text-muted">
+                                    © 2024 Système de Suivi de Sang V2.1 - Tous droits réservés
+                                </small>
+                            </div>
+                            <div class="col-md-6 text-center text-md-end">
+                                <small class="text-muted">
+                                    <a href="/health" target="_blank" class="text-decoration-none">
+                                        <i class="fas fa-heartbeat me-1"></i>État du Système
+                                    </a>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </footer>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script>
+
+
+
+
+class NotificationManager {
+    constructor() {
+        this.container = null;
+        this.init();
+    }
+    
+    init() {
+        // Create notification container
+        if (!this.container) {
+            this.container = document.createElement('div');
+            this.container.className = 'notification-container';
+            document.body.appendChild(this.container);
+        }
+    }
+    
+    show(type, title, message, details = null, duration = 5000) {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        
+        const icon = this.getIcon(type);
+        
+        let detailsHTML = '';
+        if (details) {
+            const detailsItems = Object.entries(details).map(([key, value]) => 
+                `<div class="notification-details-item">
+                    <span><strong>${key}:</strong></span>
+                    <span>${value}</span>
+                </div>`
+            ).join('');
+            
+            detailsHTML = `<div class="notification-details">${detailsItems}</div>`;
+        }
+        
+        notification.innerHTML = `
+            <div class="notification-icon">${icon}</div>
+            <div class="notification-content">
+                <div class="notification-title">${title}</div>
+                <p class="notification-message">${message}</p>
+                ${detailsHTML}
+            </div>
+            <button class="notification-close" onclick="this.parentElement.remove()">
+                ×
+            </button>
+        `;
+        
+        this.container.appendChild(notification);
+        
+        // Auto-remove after duration
+        if (duration > 0) {
+            setTimeout(() => {
+                notification.classList.add('removing');
+                setTimeout(() => notification.remove(), 300);
+            }, duration);
+        }
+        
+        // Play sound for important notifications
+        if (type === 'error' || type === 'warning') {
+            this.playNotificationSound();
+        }
+    }
+    
+    getIcon(type) {
+        const icons = {
+            success: '<i class="fas fa-check-circle"></i>',
+            error: '<i class="fas fa-exclamation-circle"></i>',
+            warning: '<i class="fas fa-exclamation-triangle"></i>',
+            info: '<i class="fas fa-info-circle"></i>'
+        };
+        return icons[type] || icons.info;
+    }
+    
+    playNotificationSound() {
+        // Optional: Add sound notification
+        // You can uncomment this if you want audio feedback
+        // const audio = new Audio('/static/sounds/notification.mp3');
+        // audio.play().catch(e => console.log('Audio play failed:', e));
+    }
+    
+    success(title, message, details = null) {
+        this.show('success', title, message, details);
+    }
+    
+    error(title, message, details = null) {
+        this.show('error', title, message, details, 8000); // Longer duration for errors
+    }
+    
+    warning(title, message, details = null) {
+        this.show('warning', title, message, details, 6000);
+    }
+    
+    info(title, message, details = null) {
+        this.show('info', title, message, details);
+    }
+}
+
+// Initialize notification manager
+const notifications = new NotificationManager();
+
+// Enhanced WebSocket Handler
+function setupEnhancedWebSocket() {
+    if (typeof window.ws === 'undefined') {
+        window.ws = new WebSocket(`ws://${window.location.host}/ws`);
+        
+        window.ws.onopen = function() {
+            console.log('✅ WebSocket connected');
+            const statusIcon = document.getElementById('connectionStatus');
+            if (statusIcon) {
+                statusIcon.className = 'fas fa-circle text-success me-1';
+            }
+            
+            notifications.success(
+                'Connexion Établie',
+                'Système de temps réel activé'
+            );
+        };
+        
+        window.ws.onclose = function() {
+            console.log('❌ WebSocket disconnected');
+            const statusIcon = document.getElementById('connectionStatus');
+            if (statusIcon) {
+                statusIcon.className = 'fas fa-circle text-danger me-1';
+            }
+            
+            notifications.warning(
+                'Connexion Perdue',
+                'Tentative de reconnexion...'
+            );
+            
+            // Reconnect after 3 seconds
+            setTimeout(() => {
+                window.ws = new WebSocket(`ws://${window.location.host}/ws`);
+            }, 3000);
+        };
+        
+        window.ws.onerror = function(error) {
+            console.error('WebSocket error:', error);
+            notifications.error(
+                'Erreur de Connexion',
+                'Vérifiez votre connexion réseau'
+            );
+        };
+        
+        window.ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            console.log('📨 WebSocket message:', data);
+            
+            // Handle notifications
+            if (data.type === 'notification') {
+                handleNotification(data.data);
+            }
+            
+            // Handle workflow updates
+            if (data.type === 'workflow_step_changed') {
+                handleWorkflowUpdate(data.data);
+            }
+            
+            // Handle workflow timeout
+            if (data.type === 'workflow_timeout') {
+                handleWorkflowTimeout(data.data);
+            }
+            
+            // Handle donation complete
+            if (data.type === 'donation_complete') {
+                handleDonationComplete(data.data);
+            }
+            
+            // Handle verification result
+            if (data.type === 'verification_result') {
+                handleVerificationResult(data.data);
+            }
+            
+            // Dispatch custom event
+            window.dispatchEvent(new CustomEvent('websocket-message', { detail: data }));
+        };
+    }
+}
+
+// Notification Handler
+function handleNotification(data) {
+    const type = data.type || 'info';
+    const title = data.title || 'Notification';
+    const message = data.message || '';
+    const details = data.details || null;
+    
+    notifications.show(type, title, message, details);
+}
+
+// Workflow Update Handler
+function handleWorkflowUpdate(data) {
+    console.log('🔄 Workflow update:', data);
+    
+    // Update status indicator
+    const statusElement = document.getElementById('workflowStatus');
+    if (statusElement) {
+        statusElement.innerHTML = `
+            <span class="status-indicator active">
+                <i class="fas fa-spinner fa-spin"></i>
+                ${data.step || 'En cours'}
+            </span>
+        `;
+    }
+    
+    // Show notification if provided
+    if (data.notification) {
+        handleNotification(data.notification);
+    }
+    
+    // Update progress steps if on workflow page
+    updateProgressSteps(data.step);
+}
+
+// Workflow Timeout Handler
+function handleWorkflowTimeout(data) {
+    console.log('⏱️ Workflow timeout:', data);
+    
+    notifications.warning(
+        'Workflow Annulé',
+        data.message || 'Le workflow a été annulé par inactivité',
+        {
+            'Raison': data.reason || 'Inactivité',
+            'Durée': '30 secondes'
+        }
+    );
+    
+    // Reset UI
+    setTimeout(() => {
+        location.reload();
+    }, 3000);
+}
+
+// Donation Complete Handler
+function handleDonationComplete(data) {
+    console.log('✅ Donation complete:', data);
+    
+    const details = data.notification?.details || {
+        'Patient': data.notification?.details?.patient || 'N/A',
+        'Groupe Sanguin': data.blood_group,
+        'Code Donneur': data.donor_code,
+        'Expiration': data.notification?.details?.expiration || 'N/A'
+    };
+    
+    notifications.success(
+        'Don Complété!',
+        'La poche de sang a été enregistrée avec succès',
+        details
+    );
+}
+
+// Verification Result Handler
+function handleVerificationResult(data) {
+    console.log('🔬 Verification result:', data);
+    
+    const isCompatible = data.result === 'COMPATIBLE';
+    
+    const details = {
+        'Patient': `${data.patient.patient_code} - ${data.patient.blood_group}`,
+        'Poche': `${data.pouch.donor_code} - ${data.pouch.blood_group}`,
+        'Résultat': data.result
+    };
+    
+    if (isCompatible) {
+        notifications.success(
+            '✅ COMPATIBLE',
+            'Transfusion autorisée',
+            details
+        );
+    } else {
+        notifications.error(
+            '⚠️ DANGER - INCOMPATIBLE',
+            'Groupes sanguins incompatibles! NE PAS transfuser!',
+            details
+        );
+    }
+}
+
+// Progress Steps Updater
+function updateProgressSteps(currentStep) {
+    const stepElements = document.querySelectorAll('.progress-step');
+    
+    const stepOrder = {
+        'WAIT_SELECTION': 0,
+        'WAIT_PATIENT_CARD': 1,
+        'WAIT_PATIENT_CARD_VERIFICATION': 1,
+        'NEW_PATIENT_FORM': 1,
+        'WAIT_PATIENT_CARD_WRITE': 1,
+        'WAIT_BLOOD_TAG': 2,
+        'COMPLETE': 3
+    };
+    
+    const currentStepNumber = stepOrder[currentStep] || 0;
+    
+    stepElements.forEach((element, index) => {
+        if (index < currentStepNumber) {
+            element.classList.add('completed');
+            element.classList.remove('active');
+        } else if (index === currentStepNumber) {
+            element.classList.add('active');
+            element.classList.remove('completed');
+        } else {
+            element.classList.remove('active', 'completed');
+        }
+    });
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Initializing enhanced frontend...');
+    setupEnhancedWebSocket();
+});
+
+// Enhanced status display helper
+function updateStatusDisplay(status, message) {
+    const statusElement = document.getElementById('workflowStatus');
+    if (statusElement) {
+        let statusClass = 'waiting';
+        let icon = 'fa-clock';
+        
+        if (status === 'active') {
+            statusClass = 'active';
+            icon = 'fa-spinner fa-spin';
+        } else if (status === 'error') {
+            statusClass = 'error';
+            icon = 'fa-exclamation-triangle';
+        }
+        
+        statusElement.innerHTML = `
+            <span class="status-indicator ${statusClass}">
+                <i class="fas ${icon}"></i>
+                ${message}
+            </span>
+        `;
+    }
+}
+
+// Helper to show workflow progress
+function showWorkflowProgress(steps) {
+    const progressHTML = `
+        <div class="workflow-progress">
+            ${steps.map((step, index) => `
+                <div class="progress-step" data-step="${index}">
+                    <div class="progress-step-number">${index + 1}</div>
+                    <div class="progress-step-label">${step}</div>
+                    ${index < steps.length - 1 ? '<div class="progress-step-connector"></div>' : ''}
+                </div>
+            `).join('')}
+        </div>
+    `;
+    
+    return progressHTML;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+        // Global functions
+        function handleLogout(event) {
+            event.preventDefault();
+            
+            if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
+                // Clear storage
+                localStorage.clear();
+                sessionStorage.clear();
+                document.cookie = 'access_token=; path=/; max-age=0';
+                
+                // Redirect to login
+                window.location.href = '/login';
+            }
+        }
+        
+        function toggleMobileSidebar() {
+            document.getElementById('sidebar').classList.toggle('show');
+        }
+        
+     function loadUserInfo() {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        
+        if (user.username) {
+            // Update all username displays
+            document.getElementById('navUsername').textContent = user.username;
+            document.getElementById('sidebarUsername').textContent = user.username;
+            document.getElementById('sidebarRole').textContent = user.role === 'admin' ? 'Administrateur' : 'Personnel Médical';
+            
+            // Set user initials
+            const initials = user.username.substring(0, 2).toUpperCase();
+            document.getElementById('userInitials').textContent = initials;
+            
+            // **NEW: Show/hide admin sections based on role**
+            const isAdmin = user.role === 'admin';
+            const adminElements = document.querySelectorAll('.admin-only');
+            
+            adminElements.forEach(element => {
+                if (isAdmin) {
+                    element.style.display = ''; // Show
+                } else {
+                    element.style.display = 'none'; // Hide
+                }
+            });
+            
+            // Log access control status
+            console.log(`[ACCESS] User: ${user.username}, Role: ${user.role}, Admin access: ${isAdmin}`);
+        }
+    }
+
+    // Check URL for access denied error
+    function checkAccessDenied() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('error') === 'access_denied') {
+            showAccessDeniedAlert();
+            // Remove error parameter from URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    }
+
+     function showAccessDeniedAlert() {
+        // Create alert element
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-danger alert-dismissible fade show position-fixed';
+        alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+        alertDiv.innerHTML = `
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Accès Refusé!</strong>
+            <br>Cette section est réservée aux administrateurs.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(alertDiv);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 5000);
+    }
+
+
+        // WebSocket connection - Global
+        if (typeof window.ws === 'undefined') {
+            window.ws = new WebSocket(`ws://${window.location.host}/ws`);
+            
+            window.ws.onopen = function() {
+                console.log('WebSocket connecté');
+                const statusIcon = document.getElementById('connectionStatus');
+                if (statusIcon) {
+                    statusIcon.className = 'fas fa-circle text-success me-1';
+                }
+            };
+            
+            window.ws.onclose = function() {
+                console.log('WebSocket déconnecté');
+                const statusIcon = document.getElementById('connectionStatus');
+                if (statusIcon) {
+                    statusIcon.className = 'fas fa-circle text-danger me-1';
+                }
+                
+                // Reconnect after 3 seconds
+                setTimeout(() => {
+                    window.ws = new WebSocket(`ws://${window.location.host}/ws`);
+                }, 3000);
+            };
+            
+            window.ws.onerror = function(error) {
+                console.error('WebSocket erreur:', error);
+            };
+            
+            window.ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                console.log('WebSocket message:', data);
+                
+                // Dispatch custom event for pages to handle
+                window.dispatchEvent(new CustomEvent('websocket-message', { detail: data }));
+            };
+        }
+        
+        // Mobile menu handling
+       document.addEventListener('DOMContentLoaded', function() {
+        loadUserInfo();
+        checkAccessDenied();
+        
+        // Close mobile sidebar when clicking outside
+        document.addEventListener('click', function(e) {
+            const sidebar = document.getElementById('sidebar');
+            const toggler = document.querySelector('.navbar-toggler');
+            
+            if (sidebar && !sidebar.contains(e.target) && toggler && !toggler.contains(e.target)) {
+                sidebar.classList.remove('show');
+            }
+        });
+    });
+
+
+        // Prevent scroll propagation from sidebar to main content
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebarNav = document.querySelector('.sidebar-nav');
+    
+    if (sidebarNav) {
+        sidebarNav.addEventListener('wheel', function(e) {
+            const scrollTop = this.scrollTop;
+            const scrollHeight = this.scrollHeight;
+            const height = this.clientHeight;
+            const delta = e.deltaY;
+            const up = delta < 0;
+
+            // Prevent scroll chaining when at boundaries
+            if (!up && delta > scrollHeight - height - scrollTop) {
+                // Scrolling down at the bottom
+                this.scrollTop = scrollHeight;
+                e.preventDefault();
+            } else if (up && -delta > scrollTop) {
+                // Scrolling up at the top
+                this.scrollTop = 0;
+                e.preventDefault();
+            }
+            
+            // Stop propagation to prevent main content from scrolling
+            e.stopPropagation();
+        }, { passive: false });
+    }
+});
+
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

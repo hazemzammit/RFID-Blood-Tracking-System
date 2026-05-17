@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Patients - Système de Suivi de Sang{% endblock %}
+{% block page_title %}Gestion des Patients{% endblock %}
+{% block breadcrumb_title %}Gestion des Patients{% endblock %}
+
+{% block content %}
+<div class="card shadow">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="m-0 font-weight-bold text-primary">Patients Enregistrés</h6>
+        <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-success" onclick="exportToExcel()">
+                <i class="fas fa-file-excel me-1"></i>Exporter Excel
+            </button>
+            <span class="badge bg-primary">Total: <span id="totalCount">{{ patients|length }}</span></span>
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- Search and Filter -->
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <input type="text" class="form-control" id="searchInput" 
+                       placeholder="🔍 Rechercher par code ou nom...">
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="bloodGroupFilter">
+                    <option value="">Tous les groupes sanguins</option>
+                    <option value="O-">O-</option>
+                    <option value="O+">O+</option>
+                    <option value="A-">A-</option>
+                    <option value="A+">A+</option>
+                    <option value="B-">B-</option>
+                    <option value="B+">B+</option>
+                    <option value="AB-">AB-</option>
+                    <option value="AB+">AB+</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="sortBy">
+                    <option value="date_desc">Plus récent d'abord</option>
+                    <option value="date_asc">Plus ancien d'abord</option>
+                    <option value="name_asc">Nom (A-Z)</option>
+                    <option value="name_desc">Nom (Z-A)</option>
+                    <option value="code_asc">Code (croissant)</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-outline-secondary w-100" onclick="resetFilters()">
+                    <i class="fas fa-redo me-1"></i>Réinitialiser
+                </button>
+            </div>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover" id="patientsTable">
+                <thead class="thead-light">
+                    <tr>
+                        <th>UID</th>
+                        <th>Code Patient</th>
+                        <th>Nom du Patient</th>
+                        <th>Groupe Sanguin</th>
+                        <th>Date d'Enregistrement</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="patientsTableBody">
+                    {% for patient in patients %}
+                    <tr data-code="{{ patient.patient_code }}" 
+                        data-name="{{ patient.patient_name }}" 
+                        data-blood="{{ patient.blood_group }}"
+                        data-date="{{ patient.created_at.timestamp() }}">
+                        <td><code>{{ patient.uid }}</code></td>
+                        <td>
+                            <span class="badge bg-info text-dark">
+                                <i class="fas fa-user me-1"></i>{{ patient.patient_code }}
+                            </span>
+                        </td>
+                        <td>{{ patient.patient_name }}</td>
+                        <td>
+                            <span class="badge bg-{{ 'danger' if patient.blood_group.endswith('-') else 'primary' }}">
+                                {{ patient.blood_group }}
+                            </span>
+                        </td>
+                        <td>{{ patient.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" 
+                                    onclick="viewPatient('{{ patient.id }}')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if not patients %}
+        <div class="text-center py-4">
+            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+            <p class="text-muted">Aucun patient enregistré pour le moment.</p>
+            <p class="text-muted">Utilisez le processus de don ou de réception pour enregistrer de nouveaux patients.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// Search functionality
+document.getElementById('searchInput').addEventListener('input', filterTable);
+document.getElementById('bloodGroupFilter').addEventListener('change', filterTable);
+document.getElementById('sortBy').addEventListener('change', sortTable);
+
+function filterTable() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const bloodGroup = document.getElementById('bloodGroupFilter').value;
+    const rows = document.querySelectorAll('#patientsTableBody tr');
+    
+    let visibleCount = 0;
+    
+    rows.forEach(row => {
+        const code = row.dataset.code.toLowerCase();
+        const name = row.dataset.name.toLowerCase();
+        const blood = row.dataset.blood;
+        
+        const matchesSearch = code.includes(searchTerm) || name.includes(searchTerm);
+        const matchesBlood = !bloodGroup || blood === bloodGroup;
+        
+        if (matchesSearch && matchesBlood) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    document.getElementById('totalCount').textContent = visibleCount;
+}
+
+function sortTable() {
+    const sortBy = document.getElementById('sortBy').value;
+    const tbody = document.getElementById('patientsTableBody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    
+    rows.sort((a, b) => {
+        switch(sortBy) {
+            case 'date_desc':
+                return parseFloat(b.dataset.date) - parseFloat(a.dataset.date);
+            case 'date_asc':
+                return parseFloat(a.dataset.date) - parseFloat(b.dataset.date);
+            case 'name_asc':
+                return a.dataset.name.localeCompare(b.dataset.name);
+            case 'name_desc':
+                return b.dataset.name.localeCompare(a.dataset.name);
+            case 'code_asc':
+                return a.dataset.code.localeCompare(b.dataset.code);
+            default:
+                return 0;
+        }
+    });
+    
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+function resetFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('bloodGroupFilter').value = '';
+    document.getElementById('sortBy').value = 'date_desc';
+    filterTable();
+    sortTable();
+}
+
+function viewPatient(id) {
+    // TODO: Implement patient detail view
+    alert('Détails du patient ID: ' + id);
+}
+
+function exportToExcel() {
+    const table = document.getElementById('patientsTable');
+    const wb = XLSX.utils.table_to_book(table, {sheet: "Patients"});
+    XLSX.writeFile(wb, `patients_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block title %}Journal d'Audit - Système de Suivi de Sang{% endblock %}
+{% block page_title %}Journal d'Audit{% endblock %}
+{% block breadcrumb_title %}Journal d'Audit{% endblock %}
+
+{% block content %}
+<div class="card shadow">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="m-0 font-weight-bold text-primary">
+            <i class="fas fa-history me-2"></i>Journal des Activités
+        </h6>
+        <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-primary" onclick="refreshAuditLog()">
+                <i class="fas fa-sync-alt me-1"></i>Actualiser
+            </button>
+            <button class="btn btn-sm btn-success" onclick="exportAuditLog()">
+                <i class="fas fa-download me-1"></i>Exporter
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- Filters -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <select class="form-select" id="actionTypeFilter">
+                    <option value="">Tous les types d'action</option>
+                    <option value="login">Connexion</option>
+                    <option value="workflow_start">Démarrage workflow</option>
+                    <option value="workflow_progress">Progression workflow</option>
+                    <option value="donation">Don</option>
+                    <option value="reception">Réception</option>
+                    <option value="debug">Debug</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="userFilter">
+                    <option value="">Tous les utilisateurs</option>
+                    <option value="system">Système</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input type="date" class="form-control" id="dateFilter">
+            </div>
+            <div class="col-md-3">
+                <input type="text" class="form-control" id="searchFilter" 
+                       placeholder="🔍 Rechercher...">
+            </div>
+        </div>
+        
+        <!-- Audit Log Table -->
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Horodatage</th>
+                        <th>Utilisateur</th>
+                        <th>Action</th>
+                        <th>Détails</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="auditTableBody">
+                    <tr>
+                        <td colspan="5" class="text-center">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                            <span class="ms-2">Chargement...</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        <nav>
+            <ul class="pagination justify-content-center" id="pagination">
+                <li class="page-item disabled">
+                    <a class="page-link">Précédent</a>
+                </li>
+                <li class="page-item active">
+                    <a class="page-link">1</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link">Suivant</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Détails de l'Action</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <pre id="detailContent" class="bg-light p-3 rounded"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentPage = 1;
+let auditLogs = [];
+
+function loadAuditLog() {
+    fetch('/api/audit/logs?limit=100')
+        .then(response => response.json())
+        .then(data => {
+            auditLogs = data;
+            renderAuditTable();
+            loadUserFilter();
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            document.getElementById('auditTableBody').innerHTML = `
+                <tr><td colspan="5" class="text-center text-danger">
+                    Erreur de chargement des logs
+                </td></tr>
+            `;
+        });
+}
+
+function renderAuditTable() {
+    const tbody = document.getElementById('auditTableBody');
+    
+    if (auditLogs.length === 0) {
+        tbody.innerHTML = `
+            <tr><td colspan="5" class="text-center text-muted">
+                <i class="fas fa-inbox fa-3x mb-3"></i>
+                <p>Aucune activité enregistrée</p>
+            </td></tr>
+        `;
+        return;
+    }
+    
+    const filtered = filterAuditLogs();
+    
+    tbody.innerHTML = filtered.map(log => `
+        <tr>
+            <td>${new Date(log.timestamp).toLocaleString('fr-FR')}</td>
+            <td>
+                <i class="fas fa-${log.user ? 'user' : 'cog'} me-1"></i>
+                ${log.user || 'Système'}
+            </td>
+            <td>
+                <span class="badge bg-${getActionColor(log.action_type)}">
+                    ${formatActionType(log.action_type)}
+                </span>
+            </td>
+            <td>${formatDetails(log.details)}</td>
+            <td>
+                <button class="btn btn-sm btn-outline-info" 
+                        onclick='showDetails(${JSON.stringify(log.details).replace(/'/g, "&apos;")})'>
+                    <i class="fas fa-eye"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function filterAuditLogs() {
+    const actionType = document.getElementById('actionTypeFilter').value;
+    const user = document.getElementById('userFilter').value;
+    const date = document.getElementById('dateFilter').value;
+    const search = document.getElementById('searchFilter').value.toLowerCase();
+    
+    return auditLogs.filter(log => {
+        const matchesAction = !actionType || log.action_type === actionType;
+        const matchesUser = !user || (user === 'system' ? !log.user : log.user === user);
+        const matchesDate = !date || new Date(log.timestamp).toLocaleDateString('en-CA') === date;
+        const matchesSearch = !search || 
+            JSON.stringify(log.details).toLowerCase().includes(search) ||
+            log.action_type.toLowerCase().includes(search);
+        
+        return matchesAction && matchesUser && matchesDate && matchesSearch;
+    });
+}
+
+function getActionColor(actionType) {
+    const colors = {
+        'login': 'success',
+        'workflow_start': 'primary',
+        'workflow_progress': 'info',
+        'donation': 'warning',
+        'reception': 'secondary',
+        'debug': 'dark'
+    };
+    return colors[actionType] || 'secondary';
+}
+
+function formatActionType(actionType) {
+    const labels = {
+        'login': 'Connexion',
+        'workflow_start': 'Démarrage',
+        'workflow_progress': 'Progression',
+        'donation': 'Don',
+        'reception': 'Réception',
+        'debug': 'Debug'
+    };
+    return labels[actionType] || actionType;
+}
+
+function formatDetails(details) {
+    if (!details) return '-';
+    if (typeof details === 'object') {
+        const keys = Object.keys(details);
+        if (keys.length === 0) return '-';
+        return keys.slice(0, 2).map(key => `${key}: ${details[key]}`).join(', ');
+    }
+    return details.toString().substring(0, 50);
+}
+
+function showDetails(details) {
+    document.getElementById('detailContent').textContent = 
+        JSON.stringify(details, null, 2);
+    new bootstrap.Modal(document.getElementById('detailModal')).show();
+}
+
+function loadUserFilter() {
+    const users = [...new Set(auditLogs.map(log => log.user).filter(u => u))];
+    const select = document.getElementById('userFilter');
+    
+    users.forEach(user => {
+        const option = document.createElement('option');
+        option.value = user;
+        option.textContent = user;
+        select.appendChild(option);
+    });
+}
+
+function refreshAuditLog() {
+    loadAuditLog();
+}
+
+function exportAuditLog() {
+    const dataStr = JSON.stringify(auditLogs, null, 2);
+    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `audit_log_${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+}
+
+// Event listeners
+document.getElementById('actionTypeFilter').addEventListener('change', renderAuditTable);
+document.getElementById('userFilter').addEventListener('change', renderAuditTable);
+document.getElementById('dateFilter').addEventListener('change', renderAuditTable);
+document.getElementById('searchFilter').addEventListener('input', renderAuditTable);
+
+// Load on page load
+loadAuditLog();
+</script>
+{% endblock %}

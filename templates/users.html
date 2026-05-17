@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Utilisateurs - Système de Suivi de Sang{% endblock %}
+{% block page_title %}Gestion des Utilisateurs{% endblock %}
+{% block breadcrumb_title %}Gestion des Utilisateurs{% endblock %}
+
+{% block content %}
+<div class="card shadow mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="m-0 font-weight-bold text-primary">
+            <i class="fas fa-users-cog me-2"></i>Utilisateurs du Système
+        </h6>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
+            <i class="fas fa-user-plus me-2"></i>Ajouter Utilisateur
+        </button>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nom d'utilisateur</th>
+                        <th>Email</th>
+                        <th>Rôle</th>
+                        <th>Statut</th>
+                        <th>Dernière connexion</th>
+                        <th>Créé le</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                    <tr>
+                        <td colspan="8" class="text-center">
+                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                            <span class="ms-2">Chargement...</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal fade" id="addUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ajouter un Utilisateur</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="addUserAlert"></div>
+                <form id="addUserForm">
+                    <div class="mb-3">
+                        <label class="form-label">Nom d'utilisateur *</label>
+                        <input type="text" class="form-control" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email *</label>
+                        <input type="email" class="form-control" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mot de passe *</label>
+                        <input type="password" class="form-control" name="password" required minlength="6">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Rôle *</label>
+                        <select class="form-select" name="role" required>
+                            <option value="medical_staff">Personnel Médical</option>
+                            <option value="admin">Administrateur</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="addUser()">
+                    <i class="fas fa-save me-2"></i>Créer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Modifier l'Utilisateur</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="editUserAlert"></div>
+                <form id="editUserForm">
+                    <input type="hidden" id="editUserId">
+                    <div class="mb-3">
+                        <label class="form-label">Nom d'utilisateur</label>
+                        <input type="text" class="form-control" id="editUsername" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" id="editEmail">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Rôle</label>
+                        <select class="form-select" id="editRole">
+                            <option value="medical_staff">Personnel Médical</option>
+                            <option value="admin">Administrateur</option>
+                        </select>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="editIsActive">
+                        <label class="form-check-label" for="editIsActive">
+                            Compte actif
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="updateUser()">
+                    <i class="fas fa-save me-2"></i>Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let addUserModalInstance, editUserModalInstance;
+
+document.addEventListener('DOMContentLoaded', function() {
+    addUserModalInstance = new bootstrap.Modal(document.getElementById('addUserModal'));
+    editUserModalInstance = new bootstrap.Modal(document.getElementById('editUserModal'));
+    loadUsers();
+});
+
+function loadUsers() {
+    fetch('/api/admin/users')
+        .then(response => response.json())
+        .then(users => {
+            const tbody = document.getElementById('usersTableBody');
+            
+            if (users.length === 0) {
+                tbody.innerHTML = `
+                    <tr><td colspan="8" class="text-center text-muted">
+                        Aucun utilisateur
+                    </td></tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = users.map(user => `
+                <tr>
+                    <td>${user.id}</td>
+                    <td><strong>${user.username}</strong></td>
+                    <td>${user.email}</td>
+                    <td>
+                        <span class="badge bg-${user.role === 'admin' ? 'danger' : 'info'}">
+                            ${user.role === 'admin' ? 'Admin' : 'Personnel'}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge bg-${user.is_active ? 'success' : 'secondary'}">
+                            ${user.is_active ? 'Actif' : 'Inactif'}
+                        </span>
+                    </td>
+                    <td>${user.last_login ? new Date(user.last_login).toLocaleString('fr-FR') : 'Jamais'}</td>
+                    <td>${new Date(user.created_at).toLocaleDateString('fr-FR')}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" 
+                                onclick='editUser(${JSON.stringify(user)})'>
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" 
+                                onclick="deleteUser(${user.id}, '${user.username}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            document.getElementById('usersTableBody').innerHTML = `
+                <tr><td colspan="8" class="text-center text-danger">
+                    Erreur de chargement
+                </td></tr>
+            `;
+        });
+}
+
+function addUser() {
+    const form = document.getElementById('addUserForm');
+    const formData = new FormData(form);
+    
+    const userData = {
+        username: formData.get('username'),
+        email: formData.get('email'),
+        password: formData.get('password'),
+        role: formData.get('role')
+    };
+    
+    fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(userData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            document.getElementById('addUserAlert').innerHTML = `
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle me-2"></i>${data.message}
+                </div>
+            `;
+            form.reset();
+            setTimeout(() => {
+                addUserModalInstance.hide();
+                loadUsers();
+            }, 1500);
+        }
+    })
+    .catch(error => {
+        document.getElementById('addUserAlert').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>Erreur: ${error}
+            </div>
+        `;
+    });
+}
+
+function editUser(user) {
+    document.getElementById('editUserId').value = user.id;
+    document.getElementById('editUsername').value = user.username;
+    document.getElementById('editEmail').value = user.email;
+    document.getElementById('editRole').value = user.role;
+    document.getElementById('editIsActive').checked = user.is_active;
+    
+    editUserModalInstance.show();
+}
+
+function updateUser() {
+    const id = document.getElementById('editUserId').value;
+    const userData = {
+        email: document.getElementById('editEmail').value,
+        role: document.getElementById('editRole').value,
+        is_active: document.getElementById('editIsActive').checked
+    };
+    
+    fetch(`/api/admin/users/${id}`, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(userData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('editUserAlert').innerHTML = `
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle me-2"></i>Utilisateur mis à jour
+            </div>
+        `;
+        setTimeout(() => {
+            editUserModalInstance.hide();
+            loadUsers();
+        }, 1500);
+    })
+    .catch(error => {
+        document.getElementById('editUserAlert').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>Erreur: ${error}
+            </div>
+        `;
+    });
+}
+
+function deleteUser(id, username) {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer l'utilisateur "${username}" ?`)) {
+        return;
+    }
+    
+    fetch(`/api/admin/users/${id}`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(() => {
+        loadUsers();
+    })
+    .catch(error => {
+        alert('Erreur: ' + error);
+    });
+}
+</script>
+{% endblock %}

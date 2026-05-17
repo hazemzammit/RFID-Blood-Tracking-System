@@ -1,0 +1,436 @@
+{% extends "base.html" %}
+
+{% block title %}Tableau de Bord - Système de Suivi de Sang{% endblock %}
+{% block page_title %}Tableau de Bord{% endblock %}
+{% block breadcrumb_title %}Tableau de Bord{% endblock %}
+
+{% block content %}
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total Poches</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_pouches }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-droplet fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Poches Disponibles</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.available_pouches }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Patients</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_patients }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-user-injured fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Vérifications</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_verifications }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clipboard-check fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alerts Row -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow mb-4 border-left-danger" id="expirationAlerts" style="display: none;">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-exclamation-triangle fa-2x text-danger me-3"></i>
+                    <div>
+                        <h6 class="text-danger font-weight-bold mb-1">Alertes d'Expiration</h6>
+                        <p class="mb-0" id="expirationMessage">Chargement...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content Row -->
+<div class="row">
+    <!-- Left Column - Charts -->
+    <div class="col-xl-8">
+        <div class="row">
+            <!-- Blood Stock Chart -->
+            <div class="col-lg-12 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                        <h6 class="m-0 font-weight-bold text-primary">Stock de Sang par Groupe</h6>
+                        <div class="dropdown no-arrow">
+                            <button class="btn btn-sm btn-outline-primary" onclick="refreshDashboard()">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-area" style="height: 300px;">
+                            <canvas id="bloodStockChart"></canvas>
+                        </div>
+                        <hr>
+                        <div class="row text-center mt-3">
+                            {% for stat in stats.blood_group_stats %}
+                            <div class="col-3 mb-2">
+                                <span class="badge bg-{{ 'danger' if stat.group.endswith('-') else 'primary' }} me-1">
+                                    {{ stat.group }}
+                                </span>
+                                <span class="font-weight-bold">{{ stat.count }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Statistics Row -->
+        <div class="row">
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-chart-pie me-2"></i>Statistiques par Statut
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div style="height: 250px;">
+                            <canvas id="statusChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-calendar-check me-2"></i>Activité Cette Semaine
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div style="height: 250px;">
+                            <canvas id="activityChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Right Column - Side Content -->
+    <div class="col-xl-4">
+        <!-- Recent Verifications -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Vérifications Récentes</h6>
+            </div>
+            <div class="card-body">
+                {% if verifications %}
+                    {% for verification in verifications[:3] %}
+                    <div class="d-flex align-items-center mb-3 pb-3 border-bottom">
+                        <div class="me-3">
+                            <div class="icon-circle bg-{{ 'success' if verification.result == 'COMPATIBLE' else 'danger' }}">
+                                <i class="fas fa-{{ 'check' if verification.result == 'COMPATIBLE' else 'times' }} text-white"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="small text-gray-500">{{ verification.verified_at.strftime('%d/%m/%Y %H:%M') }}</div>
+                            <div>
+                                <span class="badge bg-{{ 'danger' if verification.patient.blood_group.endswith('-') else 'primary' }} me-1">
+                                    {{ verification.patient.blood_group }}
+                                </span>
+                                →
+                                <span class="badge bg-{{ 'danger' if verification.pouch.blood_group.endswith('-') else 'primary' }}">
+                                    {{ verification.pouch.blood_group }}
+                                </span>
+                            </div>
+                            <small class="text-muted">{{ verification.patient.patient_code }}</small>
+                        </div>
+                        <div>
+                            <span class="badge bg-{{ 'success' if verification.result == 'COMPATIBLE' else 'danger' }}">
+                                {{ verification.result }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-clipboard-check fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Aucune vérification récente</p>
+                    </div>
+                {% endif %}
+                
+                <a href="/verifications" class="btn btn-sm btn-outline-primary w-100 mt-2">
+                    <i class="fas fa-list me-2"></i>Voir Tout
+                </a>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Actions Rapides</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/donation" class="btn btn-primary">
+                        <i class="fas fa-hand-holding-heart me-2"></i>Nouveau Don
+                    </a>
+                    <a href="/reception" class="btn btn-success">
+                        <i class="fas fa-user-injured me-2"></i>Nouvelle Réception
+                    </a>
+                    <a href="/patients" class="btn btn-info">
+                        <i class="fas fa-users me-2"></i>Voir Patients
+                    </a>
+                    <a href="/pouches" class="btn btn-warning">
+                        <i class="fas fa-droplet me-2"></i>Voir Poches
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Blood Group Distribution -->
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Distribution par Groupe</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    {% for stat in stats.blood_group_stats %}
+                    <div class="col-6 mb-3">
+                        <div class="p-3 border rounded bg-light">
+                            <span class="badge bg-{{ 'danger' if stat.group.endswith('-') else 'primary' }} mb-2">
+                                {{ stat.group }}
+                            </span>
+                            <div class="h4 font-weight-bold text-dark">{{ stat.count }}</div>
+                            <small class="text-muted">poches</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.icon-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.border-left-primary {
+    border-left: 4px solid #4e73df;
+}
+
+.border-left-success {
+    border-left: 4px solid #1cc88a;
+}
+
+.border-left-info {
+    border-left: 4px solid #36b9cc;
+}
+
+.border-left-warning {
+    border-left: 4px solid #f6c23e;
+}
+
+.border-left-danger {
+    border-left: 4px solid #e74a3b;
+}
+
+.chart-area {
+    position: relative;
+    height: 100%;
+    width: 100%;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Blood Stock Chart
+    const bloodGroups = [{% for stat in stats.blood_group_stats %}'{{ stat.group }}',{% endfor %}];
+    const stockCounts = [{% for stat in stats.blood_group_stats %}{{ stat.count }},{% endfor %}];
+    
+    const ctx = document.getElementById('bloodStockChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: bloodGroups,
+            datasets: [{
+                label: 'Stock Disponible',
+                data: stockCounts,
+                backgroundColor: [
+                    '#dc3545', '#f8d7da', '#0d6efd', '#cfe2ff',
+                    '#198754', '#d1e7dd', '#6f42c1', '#e2d9f3'
+                ],
+                borderWidth: 1,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+    
+    // Status Pie Chart
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Disponibles', 'Utilisées', 'Expirées'],
+            datasets: [{
+                data: [{{ stats.available_pouches }}, 
+                       {{ stats.total_pouches - stats.available_pouches }}, 
+                       0],
+                backgroundColor: ['#1cc88a', '#858796', '#e74a3b']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+    
+    // Activity Line Chart
+    const activityCtx = document.getElementById('activityChart').getContext('2d');
+    new Chart(activityCtx, {
+        type: 'line',
+        data: {
+            labels: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
+            datasets: [{
+                label: 'Dons',
+                data: [2, 3, 1, 5, 2, 3, 4],
+                borderColor: '#4e73df',
+                backgroundColor: 'rgba(78, 115, 223, 0.1)',
+                tension: 0.4,
+                fill: true
+            }, {
+                label: 'Réceptions',
+                data: [1, 2, 3, 2, 4, 1, 2],
+                borderColor: '#1cc88a',
+                backgroundColor: 'rgba(28, 200, 138, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+    
+    // Check for expiring blood bags
+    function checkExpirations() {
+        fetch('/api/pouches')
+            .then(response => response.json())
+            .then(pouches => {
+                const now = new Date();
+                const sevenDaysFromNow = new Date(now.getTime() + (7 * 24 * 60 * 60 * 1000));
+                
+                const expiring = pouches.filter(p => {
+                    if (p.expiration_date && p.status === 'available') {
+                        const expDate = new Date(p.expiration_date);
+                        return expDate <= sevenDaysFromNow;
+                    }
+                    return false;
+                });
+                
+                if (expiring.length > 0) {
+                    document.getElementById('expirationAlerts').style.display = 'block';
+                    document.getElementById('expirationMessage').innerHTML = 
+                        `<strong>${expiring.length}</strong> poche(s) expire(nt) dans les 7 prochains jours. 
+                        <a href="/pouches" class="text-danger"><u>Voir la liste</u></a>`;
+                }
+            });
+    }
+    
+    function refreshDashboard() {
+        location.reload();
+    }
+    
+    // Check expirations on load
+    checkExpirations();
+    
+    // Auto-refresh every 30 seconds
+    setInterval(checkExpirations, 30000);
+</script>
+{% endblock %}

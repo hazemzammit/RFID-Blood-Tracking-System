@@ -1,0 +1,520 @@
+{% extends "base.html" %}
+
+{% block title %}Centre de Debug - SystÃ¨me de Suivi de Sang{% endblock %}
+{% block page_title %}Centre de Debug Administrateur{% endblock %}
+{% block breadcrumb_title %}Centre de Debug Administrateur{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- RFID Debug Controls -->
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-tools me-2"></i>ContrÃ´les RFID
+                </h6>
+                <span class="badge bg-info">Admin uniquement</span>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- Module Principal -->
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-primary">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0"><i class="fas fa-microchip me-2"></i>Module Principal</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-grid gap-2">
+                                    <button type="button" class="btn btn-outline-primary" onclick="sendDebugCommand('MAIN', 'read')">
+                                        <i class="fas fa-book-reader me-2"></i>Lire Tag
+                                    </button>
+                                    <button type="button" class="btn btn-outline-success" onclick="sendDebugCommand('MAIN', 'auth')">
+                                        <i class="fas fa-key me-2"></i>Test Authentification
+                                    </button>
+                                    <button type="button" class="btn btn-outline-warning" onclick="sendDebugCommand('MAIN', 'signal')">
+                                        <i class="fas fa-signal me-2"></i>Force du Signal
+                                    </button>
+                                    <button type="button" class="btn btn-outline-info" onclick="showWriteModal('MAIN')">
+                                        <i class="fas fa-edit me-2"></i>Ã‰criture Manuelle
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Module VÃ©rification -->
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-success">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0"><i class="fas fa-microchip me-2"></i>Module VÃ©rification</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-grid gap-2">
+                                    <button type="button" class="btn btn-outline-primary" onclick="sendDebugCommand('VERIFICATION', 'read')">
+                                        <i class="fas fa-book-reader me-2"></i>Lire Tag
+                                    </button>
+                                    <button type="button" class="btn btn-outline-success" onclick="sendDebugCommand('VERIFICATION', 'auth')">
+                                        <i class="fas fa-key me-2"></i>Test Authentification
+                                    </button>
+                                    <button type="button" class="btn btn-outline-warning" onclick="sendDebugCommand('VERIFICATION', 'signal')">
+                                        <i class="fas fa-signal me-2"></i>Force du Signal
+                                    </button>
+                                    <button type="button" class="btn btn-outline-info" onclick="showWriteModal('VERIFICATION')">
+                                        <i class="fas fa-edit me-2"></i>Ã‰criture Manuelle
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Debug Log -->
+                <div class="mt-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5><i class="fas fa-terminal me-2"></i>Journal des Debugs</h5>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="clearDebugLog()">
+                            <i class="fas fa-trash me-1"></i>Effacer
+                        </button>
+                    </div>
+                    <div id="debugLog" class="border rounded p-3 bg-dark text-light" 
+                         style="height: 300px; overflow-y: scroll; font-family: 'Courier New', monospace; font-size: 0.9rem;">
+                        <div class="text-success">[SYSTÃˆME] Journal de debug initialisÃ©...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- System Metrics -->
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-chart-line me-2"></i>MÃ©triques SystÃ¨me
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="systemMetrics">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Chargement...</span>
+                        </div>
+                        <p class="mt-2">Chargement des mÃ©triques...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- RFID Logs History -->
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-history me-2"></i>Historique RFID
+                </h6>
+                <button class="btn btn-sm btn-primary" onclick="loadRFIDLogs()">
+                    <i class="fas fa-sync-alt me-1"></i>Actualiser
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover" id="rfidLogsTable">
+                        <thead>
+                            <tr>
+                                <th>Horodatage</th>
+                                <th>Module</th>
+                                <th>Action</th>
+                                <th>UID Tag</th>
+                                <th>DonnÃ©es</th>
+                                <th>Statut</th>
+                                <th>Signal</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rfidLogsBody">
+                            <tr>
+                                <td colspan="7" class="text-center">Chargement...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- System Status -->
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-server me-2"></i>Ã‰tat du SystÃ¨me
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="systemStatus">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Chargement...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Write Modal -->
+<div class="modal fade" id="writeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>Ã‰criture Manuelle RFID
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="writeForm">
+                    <input type="hidden" id="writeModule" name="module">
+                    <div class="mb-3">
+                        <label class="form-label">Module</label>
+                        <input type="text" class="form-control" id="writeModuleDisplay" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">DonnÃ©es Ã  Ã©crire</label>
+                        <textarea class="form-control" id="writeData" rows="3" 
+                                  placeholder="Ex: PATIENT:PT001:O+:Ahmed Ben Ali"></textarea>
+                        <small class="form-text text-muted">
+                            Format Patient: PATIENT:code:groupe:nom<br>
+                            Format Poche: BLOOD:code_donneur:groupe
+                        </small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="executeWrite()">
+                    <i class="fas fa-save me-2"></i>Ã‰crire sur Tag
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let writeModal = null;
+
+    function sendDebugCommand(module, action) {
+        addDebugLog(module, action, 'Commande envoyÃ©e...');
+        
+        fetch('/api/admin/rfid-debug', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ module: module, action: action })
+        })
+        .then(response => response.json())
+        .then(data => {
+            addDebugLog(module, action, `âœ“ Commande exÃ©cutÃ©e avec succÃ¨s`);
+        })
+        .catch(error => {
+            addDebugLog(module, action, `âœ— Erreur: ${error.message}`, true);
+        });
+    }
+
+    function showWriteModal(module) {
+        if (!writeModal) {
+            writeModal = new bootstrap.Modal(document.getElementById('writeModal'));
+        }
+        
+        document.getElementById('writeModule').value = module;
+        document.getElementById('writeModuleDisplay').value = module;
+        document.getElementById('writeData').value = '';
+        writeModal.show();
+    }
+
+    function executeWrite() {
+        const module = document.getElementById('writeModule').value;
+        const data = document.getElementById('writeData').value;
+        
+        if (!data.trim()) {
+            alert('Veuillez entrer des donnÃ©es Ã  Ã©crire');
+            return;
+        }
+        
+        addDebugLog(module, 'write', `Ã‰criture: ${data}`);
+        
+        fetch('/api/admin/rfid-debug', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ module: module, action: 'write', data: data })
+        })
+        .then(response => response.json())
+        .then(result => {
+            addDebugLog(module, 'write', 'âœ“ DonnÃ©es Ã©crites avec succÃ¨s');
+            writeModal.hide();
+        })
+        .catch(error => {
+            addDebugLog(module, 'write', `âœ— Erreur: ${error.message}`, true);
+        });
+    }
+
+    function addDebugLog(module, action, message, isError = false) {
+        const log = document.getElementById('debugLog');
+        const timestamp = new Date().toLocaleTimeString();
+        const color = isError ? 'text-danger' : 'text-success';
+        
+        const logEntry = `<div class="${color}">[${timestamp}] [${module}] ${action}: ${message}</div>`;
+        log.innerHTML += logEntry;
+        log.scrollTop = log.scrollHeight;
+    }
+
+    function clearDebugLog() {
+        document.getElementById('debugLog').innerHTML = 
+            '<div class="text-success">[SYSTÃˆME] Journal effacÃ©...</div>';
+    }
+
+    function loadSystemMetrics() {
+        fetch('/api/admin/system-metrics')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('systemMetrics').innerHTML = `
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-primary text-white h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <div class="text-xs font-weight-bold text-uppercase mb-1">Poches de Sang</div>
+                                            <div class="h5 mb-0">${data.total_pouches}</div>
+                                        </div>
+                                        <div>
+                                            <i class="fas fa-droplet fa-2x opacity-50"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-success text-white h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <div class="text-xs font-weight-bold text-uppercase mb-1">Patients</div>
+                                            <div class="h5 mb-0">${data.total_patients}</div>
+                                        </div>
+                                        <div>
+                                            <i class="fas fa-users fa-2x opacity-50"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-info text-white h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <div class="text-xs font-weight-bold text-uppercase mb-1">VÃ©rifications</div>
+                                            <div class="h5 mb-0">${data.total_verifications}</div>
+                                        </div>
+                                        <div>
+                                            <i class="fas fa-clipboard-check fa-2x opacity-50"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-warning text-white h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <div class="text-xs font-weight-bold text-uppercase mb-1">Utilisateurs</div>
+                                            <div class="h5 mb-0">${data.total_users}</div>
+                                        </div>
+                                        <div>
+                                            <i class="fas fa-user fa-2x opacity-50"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h5 class="mt-4 mb-3"><i class="fas fa-clock me-2"></i>ActivitÃ© RÃ©cente</h5>
+                    <div class="list-group">
+                        ${data.recent_activity.map(activity => `
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-user-circle me-2 text-primary"></i>
+                                    <strong>${activity.user}</strong> - ${activity.action}
+                                </div>
+                                <span class="badge bg-secondary">${new Date(activity.timestamp).toLocaleString()}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            })
+            .catch(error => {
+                document.getElementById('systemMetrics').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Erreur de chargement: ${error.message}
+                    </div>
+                `;
+            });
+    }
+
+    function loadRFIDLogs() {
+        fetch('/api/admin/rfid-logs?limit=50')
+            .then(response => response.json())
+            .then(logs => {
+                const tbody = document.getElementById('rfidLogsBody');
+                
+                if (logs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center">Aucun log disponible</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = logs.map(log => `
+                    <tr>
+                        <td>${new Date(log.timestamp).toLocaleString()}</td>
+                        <td><span class="badge bg-${log.module === 'MAIN' ? 'primary' : 'success'}">${log.module}</span></td>
+                        <td>${log.action}</td>
+                        <td><code>${log.tag_uid || '-'}</code></td>
+                        <td>${log.data ? log.data.substring(0, 30) + '...' : '-'}</td>
+                        <td>
+                            ${log.success 
+                                ? '<span class="badge bg-success"><i class="fas fa-check"></i> SuccÃ¨s</span>' 
+                                : '<span class="badge bg-danger"><i class="fas fa-times"></i> Ã‰chec</span>'}
+                        </td>
+                        <td>${log.signal_strength ? log.signal_strength + ' dBm' : '-'}</td>
+                    </tr>
+                `).join('');
+            })
+            .catch(error => {
+                document.getElementById('rfidLogsBody').innerHTML = `
+                    <tr><td colspan="7" class="text-center text-danger">Erreur: ${error.message}</td></tr>
+                `;
+            });
+    }
+
+    function loadSystemStatus() {
+        fetch('/api/debug/system-mode')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const modeData = data.data;
+                    document.getElementById('systemStatus').innerHTML = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-primary">Ã‰tat Actuel</h6>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <th>Mode:</th>
+                                        <td><span class="badge bg-primary">${modeData.current_mode}</span></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Workflow:</th>
+                                        <td><span class="badge bg-info">${modeData.current_workflow}</span></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Ã‰tape:</th>
+                                        <td><span class="badge bg-secondary">${modeData.workflow_step || 'N/A'}</span></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Module Actif:</th>
+                                        <td><span class="badge bg-success">${modeData.active_module}</span></td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-primary">Informations</h6>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <th>Patient Temp ID:</th>
+                                        <td>${modeData.patient_id_temp || 'N/A'}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>DerniÃ¨re MAJ:</th>
+                                        <td>${modeData.updated_at ? new Date(modeData.updated_at).toLocaleString() : 'N/A'}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>DonnÃ©es Workflow:</th>
+                                        <td>${modeData.workflow_data ? 'PrÃ©sent' : 'Vide'}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                        ${modeData.workflow_data ? `
+                            <div class="mt-3">
+                                <h6 class="text-primary">DonnÃ©es Workflow (JSON)</h6>
+                                <pre class="bg-dark text-light p-3 rounded">${JSON.stringify(modeData.workflow_data, null, 2)}</pre>
+                            </div>
+                        ` : ''}
+                    `;
+                } else {
+                    document.getElementById('systemStatus').innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            ${data.message}
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                document.getElementById('systemStatus').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Erreur: ${error.message}
+                    </div>
+                `;
+            });
+    }
+
+    // WebSocket for real-time updates
+    if (window.ws) {
+        const originalOnMessage = window.ws.onmessage;
+        window.ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            
+            if (data.type === 'tag_scanned') {
+                addDebugLog(
+                    data.data.module, 
+                    'scan', 
+                    `Tag dÃ©tectÃ©: ${data.data.uid} - ${data.data.tag_data}`
+                );
+            } else if (data.type === 'rfid_debug_command') {
+                addDebugLog(
+                    data.data.module,
+                    data.data.action,
+                    'Commande reÃ§ue par ESP32'
+                );
+            }
+            
+            if (originalOnMessage) originalOnMessage(event);
+        };
+    }
+
+    // Load data on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        loadSystemMetrics();
+        loadRFIDLogs();
+        loadSystemStatus();
+        
+        // Auto-refresh every 10 seconds
+        setInterval(() => {
+            loadSystemStatus();
+        }, 10000);
+    });
+</script>
+{% endblock %}  

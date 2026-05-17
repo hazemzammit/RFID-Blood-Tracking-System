@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Poches - Système de Suivi de Sang{% endblock %}
+{% block page_title %}Gestion des Poches de Sang{% endblock %}
+{% block breadcrumb_title %}Gestion des Poches de Sang{% endblock %}
+
+{% block content %}
+<div class="card shadow">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="m-0 font-weight-bold text-primary">Toutes les Poches de Sang</h6>
+        <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-success" onclick="exportToExcel()">
+                <i class="fas fa-file-excel me-1"></i>Exporter Excel
+            </button>
+            <span class="badge bg-primary">Total: <span id="totalCount">{{ pouches|length }}</span></span>
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- Search and Filter -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <input type="text" class="form-control" id="searchInput" 
+                       placeholder="🔍 Rechercher par code donneur ou UID...">
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" id="bloodGroupFilter">
+                    <option value="">Tous les groupes</option>
+                    <option value="O-">O-</option>
+                    <option value="O+">O+</option>
+                    <option value="A-">A-</option>
+                    <option value="A+">A+</option>
+                    <option value="B-">B-</option>
+                    <option value="B+">B+</option>
+                    <option value="AB-">AB-</option>
+                    <option value="AB+">AB+</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" id="statusFilter">
+                    <option value="">Tous les statuts</option>
+                    <option value="available">Disponible</option>
+                    <option value="used">Utilisé</option>
+                    <option value="expired">Expiré</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="sortBy">
+                    <option value="created_desc">Plus récent d'abord</option>
+                    <option value="created_asc">Plus ancien d'abord</option>
+                    <option value="expiration_asc">Péremption (proche)</option>
+                    <option value="expiration_desc">Péremption (lointaine)</option>
+                    <option value="donor_asc">Donneur (A-Z)</option>
+                    <option value="donor_desc">Donneur (Z-A)</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-outline-secondary w-100" onclick="resetFilters()">
+                    <i class="fas fa-redo me-1"></i>Réinitialiser
+                </button>
+            </div>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover" id="pouchesTable">
+                <thead class="thead-light">
+                    <tr>
+                        <th>UID</th>
+                        <th>Code Donneur</th>
+                        <th>Groupe Sanguin</th>
+                        <th>Statut</th>
+                        <th>Date de Péremption</th>
+                        <th>Date de Création</th>
+                    </tr>
+                </thead>
+                <tbody id="pouchesTableBody">
+                    {% for pouch in pouches %}
+                    <tr data-code="{{ pouch.donor_code }}" 
+                        data-uid="{{ pouch.uid }}"
+                        data-blood="{{ pouch.blood_group }}"
+                        data-status="{{ pouch.status }}"
+                        data-expiration="{{ pouch.expiration_date.timestamp() if pouch.expiration_date else '' }}"
+                        data-created="{{ pouch.created_at.timestamp() }}">
+                        <td><code>{{ pouch.uid }}</code></td>
+                        <td>{{ pouch.donor_code }}</td>
+                        <td>
+                            <span class="badge bg-{{ 'danger' if pouch.blood_group.endswith('-') else 'primary' }}">
+                                {{ pouch.blood_group }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if pouch.status == 'available' else 'warning' if pouch.status == 'expired' else 'secondary' }}">
+                                {{ pouch.status|title }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if pouch.expiration_date %}
+                            {{ pouch.expiration_date.strftime('%Y-%m-%d') }}
+                            {% else %}
+                            N/A
+                            {% endif %}
+                        </td>
+                        <td>{{ pouch.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if not pouches %}
+        <div class="text-center py-4">
+            <i class="fas fa-droplet fa-3x text-muted mb-3"></i>
+            <p class="text-muted">Aucune poche de sang enregistrée pour le moment.</p>
+            <p class="text-muted">Utilisez le processus de don pour enregistrer de nouvelles poches.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// Search functionality
+document.getElementById('searchInput').addEventListener('input', filterTable);
+document.getElementById('bloodGroupFilter').addEventListener('change', filterTable);
+document.getElementById('statusFilter').addEventListener('change', filterTable);
+document.getElementById('sortBy').addEventListener('change', sortTable);
+
+function filterTable() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const bloodGroup = document.getElementById('bloodGroupFilter').value;
+    const status = document.getElementById('statusFilter').value;
+    const rows = document.querySelectorAll('#pouchesTableBody tr');
+    
+    let visibleCount = 0;
+    
+    rows.forEach(row => {
+        const code = row.dataset.code.toLowerCase();
+        const uid = row.dataset.uid.toLowerCase();
+        const blood = row.dataset.blood;
+        const pouchStatus = row.dataset.status;
+        
+        const matchesSearch = code.includes(searchTerm) || uid.includes(searchTerm);
+        const matchesBlood = !bloodGroup || blood === bloodGroup;
+        const matchesStatus = !status || pouchStatus === status;
+        
+        if (matchesSearch && matchesBlood && matchesStatus) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    document.getElementById('totalCount').textContent = visibleCount;
+}
+
+function sortTable() {
+    const sortBy = document.getElementById('sortBy').value;
+    const tbody = document.getElementById('pouchesTableBody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    
+    rows.sort((a, b) => {
+        switch(sortBy) {
+            case 'created_desc':
+                return parseFloat(b.dataset.created) - parseFloat(a.dataset.created);
+            case 'created_asc':
+                return parseFloat(a.dataset.created) - parseFloat(b.dataset.created);
+            case 'expiration_asc':
+                return (parseFloat(a.dataset.expiration) || 0) - (parseFloat(b.dataset.expiration) || 0);
+            case 'expiration_desc':
+                return (parseFloat(b.dataset.expiration) || 0) - (parseFloat(a.dataset.expiration) || 0);
+            case 'donor_asc':
+                return a.dataset.code.localeCompare(b.dataset.code);
+            case 'donor_desc':
+                return b.dataset.code.localeCompare(a.dataset.code);
+            default:
+                return 0;
+        }
+    });
+    
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+function resetFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('bloodGroupFilter').value = '';
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('sortBy').value = 'created_desc';
+    filterTable();
+    sortTable();
+}
+
+function exportToExcel() {
+    const table = document.getElementById('pouchesTable');
+    const wb = XLSX.utils.table_to_book(table, {sheet: "Poches"});
+    XLSX.writeFile(wb, `poches_sang_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+</script>
+{% endblock %}

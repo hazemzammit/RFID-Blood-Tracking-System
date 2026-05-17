@@ -1,0 +1,281 @@
+/* Mobile Responsive Styles for Blood Tracking System */
+
+/* Base Mobile Styles */
+@media (max-width: 768px) {
+    /* Hide desktop sidebar on mobile */
+    .sidebar {
+        display: none !important;
+    }
+    
+    /* Make main content full width on mobile */
+    .main-content {
+        width: 100% !important;
+        margin-left: 0 !important;
+    }
+    
+    /* Mobile Navigation */
+    .mobile-nav {
+        display: block !important;
+    }
+    
+    /* Card adjustments */
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+    
+    /* Stats cards stacking */
+    .col-xl-3, .col-md-6 {
+        width: 100%;
+        margin-bottom: 1rem;
+    }
+    
+    /* Table responsiveness */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    table {
+        font-size: 0.875rem;
+    }
+    
+    table td, table th {
+        padding: 0.5rem;
+        white-space: nowrap;
+    }
+    
+    /* Workflow steps on mobile */
+    .workflow-step {
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .workflow-step h5 {
+        font-size: 1.1rem;
+    }
+    
+    .step-number {
+        width: 30px;
+        height: 30px;
+        font-size: 1rem;
+    }
+    
+    /* Buttons on mobile */
+    .btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .btn-block {
+        display: block;
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    .workflow-btn {
+        padding: 1rem;
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+    }
+    
+    /* Forms on mobile */
+    .form-control, .form-select {
+        font-size: 1rem;
+        padding: 0.75rem;
+    }
+    
+    .form-label {
+        font-size: 0.95rem;
+        font-weight: 600;
+    }
+    
+    /* Alerts on mobile */
+    .alert {
+        font-size: 0.9rem;
+        padding: 0.75rem;
+    }
+    
+    /* Badge adjustments */
+    .badge {
+        font-size: 0.8rem;
+        padding: 0.35rem 0.6rem;
+    }
+    
+    /* Charts on mobile */
+    .chart-area {
+        height: 250px !important;
+    }
+    
+    /* Dashboard stats text */
+    .text-xs {
+        font-size: 0.7rem !important;
+    }
+    
+    .h5 {
+        font-size: 1.1rem !important;
+    }
+}
+
+/* Tablet Styles (768px - 992px) */
+@media (min-width: 768px) and (max-width: 992px) {
+    .sidebar {
+        width: 200px;
+    }
+    
+    .main-content {
+        margin-left: 200px;
+    }
+    
+    .col-md-6 {
+        width: 50%;
+    }
+    
+    table {
+        font-size: 0.9rem;
+    }
+}
+
+/* Landscape phone adjustments */
+@media (max-width: 768px) and (orientation: landscape) {
+    .workflow-step {
+        padding: 0.75rem;
+    }
+    
+    .card-body {
+        padding: 0.75rem;
+    }
+    
+    .navbar {
+        padding: 0.5rem 1rem;
+    }
+}
+
+/* Touch-friendly tap targets */
+@media (hover: none) and (pointer: coarse) {
+    .btn, .nav-link, a, button {
+        min-height: 44px;
+        min-width: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .table td, .table th {
+        min-height: 44px;
+    }
+}
+
+/* Small phones (< 375px) */
+@media (max-width: 375px) {
+    body {
+        font-size: 14px;
+    }
+    
+    .navbar-brand {
+        font-size: 1rem;
+    }
+    
+    .card-header h6 {
+        font-size: 0.9rem;
+    }
+    
+    .btn {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.8rem;
+    }
+    
+    .workflow-step h5 {
+        font-size: 1rem;
+    }
+}
+
+/* Print styles */
+@media print {
+    .sidebar, .navbar, .btn, .mobile-nav {
+        display: none !important;
+    }
+    
+    .main-content {
+        width: 100% !important;
+        margin: 0 !important;
+    }
+    
+    .card {
+        page-break-inside: avoid;
+    }
+}
+
+/* Additional utility classes for mobile */
+.mobile-only {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .mobile-only {
+        display: block;
+    }
+    
+    .desktop-only {
+        display: none;
+    }
+}
+
+/* Sticky headers on mobile */
+@media (max-width: 768px) {
+    .navbar {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+    }
+}
+
+/* Mobile workflow container */
+@media (max-width: 768px) {
+    .workflow-container {
+        padding: 0.5rem;
+    }
+    
+    .step-content {
+        padding: 0.75rem;
+    }
+    
+    /* Vertical button groups on mobile */
+    .btn-group {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .btn-group .btn {
+        border-radius: 0.25rem !important;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Mobile debug center */
+    .btn-group-vertical {
+        width: 100%;
+    }
+    
+    .btn-group-vertical .btn {
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* Improve touch scrolling */
+.table-responsive, #debugLog {
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile modal adjustments */
+@media (max-width: 768px) {
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+    
+    .modal-content {
+        border-radius: 0.5rem;
+    }
+}

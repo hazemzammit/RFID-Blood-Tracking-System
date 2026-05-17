@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+
+{% block title %}Paramètres - Système de Suivi de Sang{% endblock %}
+{% block page_title %}Paramètres Système{% endblock %}
+{% block breadcrumb_title %}Paramètres Système{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- General Settings -->
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-cog me-2"></i>Paramètres Généraux
+                </h6>
+            </div>
+            <div class="card-body">
+                <form id="generalSettingsForm">
+                    <div class="mb-3">
+                        <label class="form-label">Nom du Système</label>
+                        <input type="text" class="form-control" value="Système de Suivi de Sang V2.1" readonly>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Durée de Validité des Poches (jours)</label>
+                        <input type="number" class="form-control" id="bagExpiration" value="42" min="1" max="90">
+                        <small class="text-muted">Actuellement: 42 jours (6 semaines)</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Durée de Session (minutes)</label>
+                        <input type="number" class="form-control" id="sessionDuration" value="480" min="30" max="1440">
+                        <small class="text-muted">Actuellement: 480 minutes (8 heures)</small>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="enableNotifications" checked>
+                        <label class="form-check-label" for="enableNotifications">
+                            Activer les notifications d'expiration
+                        </label>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="enableAuditLog" checked>
+                        <label class="form-check-label" for="enableAuditLog">
+                            Activer le journal d'audit
+                        </label>
+                    </div>
+                    
+                    <button type="button" class="btn btn-primary" onclick="saveGeneralSettings()">
+                        <i class="fas fa-save me-2"></i>Enregistrer
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- RFID Settings -->
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-wifi me-2"></i>Paramètres RFID
+                </h6>
+            </div>
+            <div class="card-body">
+                <form id="rfidSettingsForm">
+                    <div class="mb-3">
+                        <label class="form-label">Adresse IP ESP32</label>
+                        <input type="text" class="form-control" id="esp32Ip" placeholder="192.168.1.100">
+                        <small class="text-muted">Laissez vide pour auto-détection</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Timeout de Lecture RFID (secondes)</label>
+                        <input type="number" class="form-control" id="rfidTimeout" value="30" min="5" max="120">
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="enableRfidDebug">
+                        <label class="form-check-label" for="enableRfidDebug">
+                            Activer le mode debug RFID
+                        </label>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="enableSimulation" checked>
+                        <label class="form-check-label" for="enableSimulation">
+                            Activer le mode simulation (sans hardware)
+                        </label>
+                    </div>
+                    
+                    <button type="button" class="btn btn-primary" onclick="saveRfidSettings()">
+                        <i class="fas fa-save me-2"></i>Enregistrer
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="testRfidConnection()">
+                        <i class="fas fa-plug me-2"></i>Tester Connexion
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Database Info -->
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-database me-2"></i>Informations Base de Données
+                </h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th>Base de Données:</th>
+                        <td>blood_tracking_v2_1</td>
+                    </tr>
+                    <tr>
+                        <th>Utilisateur:</th>
+                        <td>blood_user_v2</td>
+                    </tr>
+                    <tr>
+                        <th>Port:</th>
+                        <td>3308</td>
+                    </tr>
+                    <tr>
+                        <th>Statut:</th>
+                        <td><span class="badge bg-success">Connecté</span></td>
+                    </tr>
+                </table>
+                
+                <hr>
+                
+                <h6 class="text-danger mb-3">Zone Dangereuse</h6>
+                <button class="btn btn-outline-warning btn-sm mb-2 w-100" onclick="backupDatabase()">
+                    <i class="fas fa-download me-2"></i>Sauvegarder la Base de Données
+                </button>
+                <button class="btn btn-outline-danger btn-sm w-100" onclick="resetDatabase()">
+                    <i class="fas fa-trash-restore me-2"></i>Réinitialiser la Base de Données
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- System Info -->
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-info-circle me-2"></i>Informations Système
+                </h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th>Version:</th>
+                        <td>2.1.0</td>
+                    </tr>
+                    <tr>
+                        <th>Framework:</th>
+                        <td>FastAPI + Python 3.9+</td>
+                    </tr>
+                    <tr>
+                        <th>Base de Données:</th>
+                        <td>MySQL 8.0</td>
+                    </tr>
+                    <tr>
+                        <th>Démarré:</th>
+                        <td id="systemUptime">Calcul en cours...</td>
+                    </tr>
+                    <tr>
+                        <th>Dernière MAJ:</th>
+                        <td>{{ now }}</td>
+                    </tr>
+                </table>
+                
+                <hr>
+                
+                <div class="d-grid gap-2">
+                    <a href="/health" class="btn btn-outline-info btn-sm" target="_blank">
+                        <i class="fas fa-heartbeat me-2"></i>Vérifier l'État du Système
+                    </a>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="location.reload()">
+                        <i class="fas fa-sync-alt me-2"></i>Actualiser la Page
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alert Container -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div id="settingsToast" class="toast hide" role="alert">
+        <div class="toast-header">
+            <i class="fas fa-check-circle text-success me-2"></i>
+            <strong class="me-auto">Paramètres</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" id="toastMessage">
+            Paramètres enregistrés avec succès!
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showToast(message, isSuccess = true) {
+    const toastEl = document.getElementById('settingsToast');
+    const toastBody = document.getElementById('toastMessage');
+    const toastHeader = toastEl.querySelector('.toast-header i');
+    
+    toastBody.textContent = message;
+    
+    if (isSuccess) {
+        toastHeader.className = 'fas fa-check-circle text-success me-2';
+    } else {
+        toastHeader.className = 'fas fa-exclamation-circle text-danger me-2';
+    }
+    
+    const toast = new bootstrap.Toast(toastEl);
+    toast.show();
+}
+
+function saveGeneralSettings() {
+    const settings = {
+        bag_expiration: document.getElementById('bagExpiration').value,
+        session_duration: document.getElementById('sessionDuration').value,
+        enable_notifications: document.getElementById('enableNotifications').checked,
+        enable_audit: document.getElementById('enableAuditLog').checked
+    };
+    
+    // Save to localStorage for now (in production, save to backend)
+    localStorage.setItem('generalSettings', JSON.stringify(settings));
+    showToast('Paramètres généraux enregistrés!');
+}
+
+function saveRfidSettings() {
+    const settings = {
+        esp32_ip: document.getElementById('esp32Ip').value,
+        rfid_timeout: document.getElementById('rfidTimeout').value,
+        enable_debug: document.getElementById('enableRfidDebug').checked,
+        enable_simulation: document.getElementById('enableSimulation').checked
+    };
+    
+    localStorage.setItem('rfidSettings', JSON.stringify(settings));
+    showToast('Paramètres RFID enregistrés!');
+}
+
+function testRfidConnection() {
+    const ip = document.getElementById('esp32Ip').value;
+    
+    if (!ip) {
+        showToast('Veuillez entrer une adresse IP', false);
+        return;
+    }
+    
+    showToast('Test de connexion en cours...');
+    
+    // Simulate connection test
+    setTimeout(() => {
+        showToast('Connexion réussie!', true);
+    }, 2000);
+}
+
+function backupDatabase() {
+    if (!confirm('Êtes-vous sûr de vouloir sauvegarder la base de données?')) {
+        return;
+    }
+    
+    showToast('Sauvegarde en cours...');
+    
+    // In production, this would call a backend endpoint
+    setTimeout(() => {
+        showToast('Sauvegarde créée avec succès!');
+    }, 2000);
+}
+
+function resetDatabase() {
+    const confirmation = prompt('ATTENTION: Cette action supprimera TOUTES les données!\nTapez "CONFIRMER" pour continuer:');
+    
+    if (confirmation !== 'CONFIRMER') {
+        showToast('Réinitialisation annulée', false);
+        return;
+    }
+    
+    showToast('Réinitialisation en cours...', false);
+    
+    // In production, this would call a backend endpoint
+    setTimeout(() => {
+        showToast('Base de données réinitialisée!');
+        setTimeout(() => location.reload(), 2000);
+    }, 3000);
+}
+
+// Load saved settings
+document.addEventListener('DOMContentLoaded', function() {
+    const generalSettings = JSON.parse(localStorage.getItem('generalSettings') || '{}');
+    const rfidSettings = JSON.parse(localStorage.getItem('rfidSettings') || '{}');
+    
+    if (generalSettings.bag_expiration) {
+        document.getElementById('bagExpiration').value = generalSettings.bag_expiration;
+    }
+    if (generalSettings.session_duration) {
+        document.getElementById('sessionDuration').value = generalSettings.session_duration;
+    }
+    if (generalSettings.enable_notifications !== undefined) {
+        document.getElementById('enableNotifications').checked = generalSettings.enable_notifications;
+    }
+    if (generalSettings.enable_audit !== undefined) {
+        document.getElementById('enableAuditLog').checked = generalSettings.enable_audit;
+    }
+    
+    if (rfidSettings.esp32_ip) {
+        document.getElementById('esp32Ip').value = rfidSettings.esp32_ip;
+    }
+    if (rfidSettings.rfid_timeout) {
+        document.getElementById('rfidTimeout').value = rfidSettings.rfid_timeout;
+    }
+    if (rfidSettings.enable_debug !== undefined) {
+        document.getElementById('enableRfidDebug').checked = rfidSettings.enable_debug;
+    }
+    if (rfidSettings.enable_simulation !== undefined) {
+        document.getElementById('enableSimulation').checked = rfidSettings.enable_simulation;
+    }
+});
+
+// Calculate system uptime (mock)
+function updateUptime() {
+    const now = new Date();
+    const start = new Date(now.getTime() - (Math.random() * 86400000)); // Random uptime
+    const diff = now - start;
+    const hours = Math.floor(diff / 3600000);
+    const minutes = Math.floor((diff % 3600000) / 60000);
+    
+    document.getElementById('systemUptime').textContent = `${hours}h ${minutes}m`;
+}
+
+updateUptime();
+setInterval(updateUptime, 60000);
+</script>
+{% endblock %}

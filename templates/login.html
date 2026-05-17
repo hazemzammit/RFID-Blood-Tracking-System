@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - Système de Suivi de Sang</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/css/modern-dashboard.css" rel="stylesheet">
+</head>
+
+<body>
+    <div class="auth-page">
+        <div class="login-container">
+        <!-- Left Side - Branding -->
+        <div class="login-left">
+            <i class="fas fa-tint"></i>
+            <h2>Système de Suivi de Sang</h2>
+            <p>Sécurité, Traçabilité et Efficacité dans la gestion des dons de sang</p>
+        </div>
+
+        <!-- Right Side - Login Form -->
+        <div class="login-right">
+            <h3>Connexion</h3>
+            <p>Bienvenue! Veuillez vous connecter pour continuer.</p>
+
+            <div id="alertContainer"></div>
+
+            <form id="loginForm">
+                <div class="mb-3">
+                    <label class="form-label">
+                        <i class="fas fa-user me-2"></i>Nom d'utilisateur ou Email
+                    </label>
+                    <input type="text" class="form-control" id="username" name="username" required
+                        placeholder="Entrez votre nom d'utilisateur ou email">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">
+                        <i class="fas fa-lock me-2"></i>Mot de passe
+                    </label>
+                    <input type="password" class="form-control" id="password" name="password" required
+                        placeholder="Entrez votre mot de passe">
+                </div>
+
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="rememberMe">
+                    <label class="form-check-label" for="rememberMe">
+                        Se souvenir de moi
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-login" id="loginBtn">
+                    <i class="fas fa-sign-in-alt me-2"></i>Se Connecter
+                </button>
+            </form>
+
+            <div class="register-link">
+                Pas encore de compte?
+                <a href="/register">Créer un compte</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+ 
+    <!-- REPLACE THE ENTIRE SCRIPT SECTION IN login.html -->
+<!-- Find the <script> tag at the bottom and replace with this: -->
+
+<script>
+document.getElementById('loginForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    const loginBtn = document.getElementById('loginBtn');
+    const alertContainer = document.getElementById('alertContainer');
+
+    // Disable button
+    loginBtn.disabled = true;
+    loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Connexion en cours...';
+
+    try {
+        const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            console.log('[LOGIN] Success! Full response:', data);
+            console.log('[LOGIN] User data:', data.user);
+            console.log('[LOGIN] User role:', data.user.role);
+            
+            // CRITICAL FIX: Store complete user data in localStorage
+            const userData = {
+                id: data.user.id,
+                username: data.user.username,
+                role: data.user.role,
+                email: data.user.email || '',
+                token: data.access_token
+            };
+            
+            localStorage.setItem('user', JSON.stringify(userData));
+            console.log('[LOGIN] User data stored in localStorage:', userData);
+            
+            // Show success message
+            alertContainer.innerHTML = `
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle me-2"></i>
+                    Connexion réussie! Redirection...
+                    <br><small>Rôle: ${data.user.role}</small>
+                </div>
+            `;
+
+            // Redirect to dashboard
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 1000);
+            
+        } else {
+            console.error('[LOGIN] Failed:', data);
+            
+            // Show error
+            alertContainer.innerHTML = `
+                <div class="alert alert-danger alert-dismissible fade show">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    ${data.detail || 'Identifiants invalides'}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+
+            // Re-enable button
+            loginBtn.disabled = false;
+            loginBtn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>Se Connecter';
+        }
+    } catch (error) {
+        console.error('[LOGIN] Error:', error);
+        alertContainer.innerHTML = `
+            <div class="alert alert-danger alert-dismissible fade show">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Erreur de connexion au serveur
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+
+        // Re-enable button
+        loginBtn.disabled = false;
+        loginBtn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>Se Connecter';
+    }
+});
+
+// Debug: Check if already logged in
+window.addEventListener('load', function() {
+    const user = localStorage.getItem('user');
+    if (user) {
+        console.log('[LOGIN] Already logged in:', JSON.parse(user));
+    }
+});
+</script>
+
+</body>
+
+</html>

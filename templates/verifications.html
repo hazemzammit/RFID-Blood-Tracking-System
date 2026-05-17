@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Historique des Vérifications - Système de Suivi de Sang{% endblock %}
+{% block page_title %}Historique des Vérifications de Transfusion{% endblock %}
+{% block breadcrumb_title %}Historique des Vérifications de Transfusion{% endblock %}
+
+{% block content %}
+<div class="card shadow">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="m-0 font-weight-bold text-primary">Historique des Vérifications</h6>
+        <div>
+            <span class="badge bg-success me-2">COMPATIBLE: {{ verifications|selectattr('result', 'equalto', 'COMPATIBLE')|list|length }}</span>
+            <span class="badge bg-danger">DANGER: {{ verifications|selectattr('result', 'equalto', 'DANGER')|list|length }}</span>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead class="thead-light">
+                    <tr>
+                        <th>Date & Heure</th>
+                        <th>Poche de Sang</th>
+                        <th>Patient</th>
+                        <th>Compatibilité</th>
+                        <th>Résultat</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for verification in verifications %}
+                    <tr class="{% if verification.result == 'COMPATIBLE' %}table-success{% else %}table-danger{% endif %}">
+                        <td>{{ verification.verified_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td>
+                            <div>
+                                <strong>UID:</strong> <code>{{ verification.pouch.uid }}</code>
+                            </div>
+                            <div>
+                                <strong>Groupe:</strong> 
+                                <span class="badge bg-{{ 'danger' if verification.pouch.blood_group.endswith('-') else 'primary' }}">
+                                    {{ verification.pouch.blood_group }}
+                                </span>
+                            </div>
+                            <div>
+                                <strong>Donneur:</strong> {{ verification.pouch.donor_code }}
+                            </div>
+                        </td>
+                        <td>
+                            <div>
+                                <strong>Code:</strong> {{ verification.patient.patient_code }}
+                            </div>
+                            <div>
+                                <strong>Nom:</strong> {{ verification.patient.patient_name }}
+                            </div>
+                            <div>
+                                <strong>Groupe:</strong> 
+                                <span class="badge bg-{{ 'danger' if verification.patient.blood_group.endswith('-') else 'primary' }}">
+                                    {{ verification.patient.blood_group }}
+                                </span>
+                            </div>
+                        </td>
+                        <td>
+                            {{ verification.pouch.blood_group }} → {{ verification.patient.blood_group }}
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if verification.result == 'COMPATIBLE' else 'danger' }}">
+                                {% if verification.result == 'COMPATIBLE' %}
+                                    <i class="fas fa-check-circle me-1"></i>COMPATIBLE
+                                {% else %}
+                                    <i class="fas fa-exclamation-triangle me-1"></i>DANGER
+                                {% endif %}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if not verifications %}
+        <div class="text-center py-4">
+            <i class="fas fa-clipboard-check fa-3x text-muted mb-3"></i>
+            <p class="text-muted">Aucune vérification enregistrée pour le moment.</p>
+            <p class="text-muted">Utilisez le processus de réception pour effectuer des vérifications de compatibilité.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
